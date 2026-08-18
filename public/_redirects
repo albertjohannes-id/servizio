@@ -1,0 +1,3 @@
+# Cloudflare Pages — SPA fallback for Expo web (output: single)
+# Client-side routes (React Navigation) must not 404 on refresh.
+/*    /index.html   200

@@ -1,20 +1,37 @@
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppShell } from './src/components/AppShell';
+import { AssetProvider } from './src/data/AssetContext';
+import { AuthProvider } from './src/data/AuthContext';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+function useWebFieldInset() {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const id = 'servizio-field-inset';
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent =
+      'input, textarea { padding-left: 20px !important; padding-right: 16px !important; box-sizing: border-box; }';
+    document.head.appendChild(style);
+  }, []);
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default function App() {
+  useWebFieldInset();
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AssetProvider>
+          <AppShell>
+            <RootNavigator />
+          </AppShell>
+          <StatusBar style="dark" />
+        </AssetProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}

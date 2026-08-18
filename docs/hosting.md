@@ -8,7 +8,7 @@ Static SPA. No server.
 npx expo export --platform web
 ```
 
-Output: `dist/` (`index.html`, `_expo/static`, `_redirects` from `public/_redirects`).
+Output: `dist/` (`index.html`, `_expo/static`, assets).
 
 `app.json` must keep:
 
@@ -16,21 +16,23 @@ Output: `dist/` (`index.html`, `_expo/static`, `_redirects` from `public/_redire
 "web": { "bundler": "metro", "output": "single" }
 ```
 
-## Pages settings
+## Cloudflare dashboard (Workers Git)
 
-| Setting | Value |
+This is **two fields**, not one command. Project name must stay `servizio` (matches `wrangler.jsonc`).
+
+| Field | Value |
 |---|---|
-| Framework preset | None |
-| Root directory | repository root |
+| Project name | `servizio` |
+| Root directory | `/` |
 | Build command | `npx expo export --platform web` |
-| Build output | `dist` |
-| Node | 20 |
+| Deploy command (production) | `npx wrangler deploy` |
+| Non-production builds | `npx wrangler versions upload` (leave default) |
+| API token | leave **Create new token** |
+| Env vars | `NODE_VERSION` = `20` |
 
-SPA fallback (`public/_redirects`):
+Do not put `wrangler deploy` in the **build** command. Expo only writes `dist/`; Wrangler uploads it.
 
-```
-/*    /index.html   200
-```
+`wrangler.jsonc` points assets at `./dist` and uses SPA fallback (`not_found_handling: "single-page-application"`). Do **not** add `public/_redirects` with `/* /index.html 200` — Workers treats that as an infinite loop and deploy fails with code 100324.
 
 Host at site root. Subpaths need extra `baseUrl` work — skip for MVP.
 

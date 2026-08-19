@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
-import { DEFAULT_INTERVALS, BRANDS_BY_TYPE } from '../data/seed';
+import { DEFAULT_INTERVALS, BRANDS_BY_TYPE, PURCHASE_AT_OPTIONS } from '../data/seed';
 import { parseNumber } from '../domain/format';
 import { addDaysIso, todayIso } from '../domain/status';
 import { AssetType, ConditionStatus } from '../domain/types';
-import { dictionaries } from '../i18n/strings';
+import { Dictionary, dictionaries } from '../i18n/strings';
 import { DateField } from '../components/DateField';
 import { TypePicker } from '../components/TypePicker';
 import { TextField } from '../components/TextField';
@@ -19,6 +19,15 @@ import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditAsset'>;
+
+function namePlaceholderFor(type: AssetType, t: Dictionary): string {
+  if (type === 'motorcycle') return t.namePlaceholder_motorcycle;
+  if (type === 'bike') return t.namePlaceholder_bike;
+  if (type === 'ac') return t.namePlaceholder_ac;
+  if (type === 'water_heater') return t.namePlaceholder_water_heater;
+  if (type === 'other') return t.namePlaceholder_other;
+  return t.namePlaceholder_car;
+}
 
 export function AddEditAssetScreen({ navigation, route }: Props) {
   const { state, upsertAsset, archiveAsset } = useAssets();
@@ -36,6 +45,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   const [purchaseYear, setPurchaseYear] = useState(
     existing?.purchaseYear != null ? String(existing.purchaseYear) : ''
   );
+  const [purchaseAt, setPurchaseAt] = useState(existing?.purchaseAt ?? '');
   const [condition, setCondition] = useState<ConditionStatus>(existing?.condition ?? 'working');
   const [nextServiceAt, setNextServiceAt] = useState(
     existing?.nextServiceAt ?? addDaysIso(todayIso(), defaults.days)
@@ -58,6 +68,13 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       .map((a) => a.brand.trim());
     return [...new Set([...fromKind, ...fromAssets])];
   }, [type, state.assets]);
+
+  const purchaseAtOptions = useMemo(() => {
+    const fromAssets = state.assets
+      .filter((a) => a.purchaseAt?.trim())
+      .map((a) => a.purchaseAt.trim());
+    return [...new Set([...PURCHASE_AT_OPTIONS, ...fromAssets])];
+  }, [state.assets]);
 
   const yearOk = (raw: string) => {
     if (!raw.trim()) return true;
@@ -100,23 +117,29 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       model: model.trim(),
       manufactureYear: parseNumber(manufactureYear),
       purchaseYear: parseNumber(purchaseYear),
+      purchaseAt: purchaseAt.trim(),
       condition,
       nextServiceAt,
       usageEnabled,
       usageCurrent: usageEnabled ? parseNumber(usageCurrent) : null,
       usageInterval: usageEnabled ? parseNumber(usageInterval) : null,
       usageNextDue: usageEnabled ? parseNumber(usageNextDue) : null,
-      serviceOverride: existing?.serviceOverride ?? null,
+      location: existing?.location ?? 'home',
     });
     navigation.replace('AssetDetail', { assetId: id });
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TextField label={t.name} value={name} onChangeText={setName} placeholder="Family Car" />
-
       <Text style={styles.label}>{t.kind}</Text>
       <TypePicker value={type} onChange={onTypeChange} t={t} />
+
+      <TextField
+        label={t.name}
+        value={name}
+        onChangeText={setName}
+        placeholder={namePlaceholderFor(type, t)}
+      />
 
       <SuggestField
         label={t.brand}
@@ -148,6 +171,15 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
         value={purchaseYear}
         onChange={setPurchaseYear}
         placeholder="2022"
+      />
+      <SuggestField
+        label={t.purchaseAt}
+        value={purchaseAt}
+        onChange={setPurchaseAt}
+        options={purchaseAtOptions}
+        placeholder={t.purchaseAtPlaceholder}
+        t={t}
+        addNamed={t.searchPurchaseAt}
       />
 
       <Text style={styles.label}>{t.condition}</Text>

@@ -11,18 +11,18 @@ import {
   AppState,
   Asset,
   AssetChange,
+  AssetLocation,
   ChangeField,
   ConditionStatus,
   ServiceLog,
   Vendor,
 } from '../domain/types';
 import { todayIso } from '../domain/status';
-import { blankState, clearState, emptyState, loadState, sampleState, saveState } from './repository';
-import { createSeedAssets, SEED_VENDORS } from './seed';
+import { blankState, clearState, emptyState, loadState, normalizeAsset, sampleState, saveState } from './repository';
+import { createSeedAssets, mergeSeedVendors, SEED_VENDORS } from './seed';
 
-type AssetInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'serviceOverride'> & {
+type AssetInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'archived'> & {
   id?: string;
-  serviceOverride?: Asset['serviceOverride'];
 };
 
 interface AssetContextValue {
@@ -34,8 +34,8 @@ interface AssetContextValue {
   restoreAsset: (id: string) => void;
   permanentlyDeleteAsset: (id: string) => void;
   setCondition: (id: string, condition: ConditionStatus) => void;
-  setInService: (id: string) => void;
-  clearInService: (id: string) => void;
+  setLocation: (id: string, location: AssetLocation) => void;
+  setHomeColumns: (columns: 2 | 3) => void;
   updateUsage: (id: string, usageCurrent: number) => void;
   logService: (input: {
     assetId: string;
@@ -121,12 +121,14 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
       vendors: [],
       events: [],
       language: 'en' as const,
+      homeColumns: 2 as const,
     };
 
     return {
       ready,
       state: s,
       setLanguage: (language) => mutate((prev) => ({ ...prev, language })),
+      setHomeColumns: (homeColumns) => mutate((prev) => ({ ...prev, homeColumns })),
       upsertAsset: (input) => {
         const now = todayIso();
         let id = input.id;
@@ -145,6 +147,7 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
             makeChange(before.id, 'usageNextDue', before.usageNextDue, input.usageNextDue),
             makeChange(before.id, 'usageInterval', before.usageInterval, input.usageInterval),
             makeChange(before.id, 'usageEnabled', before.usageEnabled, input.usageEnabled),
+            makeChange(before.id, 'location', before.location, input.location),
           ];
           for (const row of next) if (row) diffs.push(row);
         }
@@ -159,7 +162,6 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
                   ? {
                       ...a,
                       ...input,
-                      serviceOverride: input.serviceOverride ?? a.serviceOverride,
                       updatedAt: now,
                     }
                   : a
@@ -175,8 +177,9 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
             model: input.model.trim(),
             manufactureYear: input.manufactureYear,
             purchaseYear: input.purchaseYear,
+            purchaseAt: input.purchaseAt ?? '',
             condition: input.condition,
-            serviceOverride: null,
+            location: input.location ?? 'home',
             nextServiceAt: input.nextServiceAt,
             usageEnabled: input.usageEnabled,
             usageCurrent: input.usageCurrent,
@@ -231,33 +234,18 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
         }));
         track('condition_changed', { assetId: id, oldValue: before?.condition, newValue: condition });
       },
-      setInService: (id) => {
+      setLocation: (id, location) => {
         const before = s.assets.find((a) => a.id === id);
-        if (!before || before.serviceOverride === 'in_service') return;
-        const row = makeChange(id, 'in_service', before.serviceOverride, 'in_service');
+        const row = before ? makeChange(id, 'location', before.location, location) : null;
+        if (!row) return;
         mutate((prev) => ({
           ...prev,
-          changes: row ? [row, ...(prev.changes ?? [])] : prev.changes ?? [],
+          changes: [row, ...(prev.changes ?? [])],
           assets: prev.assets.map((a) =>
-            a.id === id
-              ? { ...a, serviceOverride: 'in_service', updatedAt: todayIso() }
-              : a
+            a.id === id ? { ...a, location, updatedAt: todayIso() } : a
           ),
         }));
-        track('marked_in_service', { assetId: id });
-      },
-      clearInService: (id) => {
-        const before = s.assets.find((a) => a.id === id);
-        if (!before || before.serviceOverride !== 'in_service') return;
-        const row = makeChange(id, 'in_service', 'in_service', null);
-        mutate((prev) => ({
-          ...prev,
-          changes: row ? [row, ...(prev.changes ?? [])] : prev.changes ?? [],
-          assets: prev.assets.map((a) =>
-            a.id === id ? { ...a, serviceOverride: null, updatedAt: todayIso() } : a
-          ),
-        }));
-        track('cleared_in_service', { assetId: id });
+        track('location_changed', { assetId: id, oldValue: before?.location, newValue: location });
       },
       updateUsage: (id, usageCurrent) => {
         const before = s.assets.find((a) => a.id === id);
@@ -296,7 +284,7 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
             a.id === input.assetId
               ? {
                   ...a,
-                  serviceOverride: null,
+                  location: 'home',
                   nextServiceAt: input.nextServiceAt,
                   usageNextDue: input.usageNextDue,
                   usageCurrent:
@@ -345,15 +333,12 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
             ...log,
             serviceTagUri: log.serviceTagUri ?? null,
           })),
-          assets: (next.assets ?? []).map((a) => ({
-            ...a,
-            brand: a.brand ?? '',
-            model: a.model ?? '',
-            manufactureYear: a.manufactureYear ?? null,
-            purchaseYear: a.purchaseYear ?? null,
-          })),
+          assets: (next.assets ?? []).map((a) =>
+            normalizeAsset(a as Asset & { serviceOverride?: 'in_service' | null })
+          ),
           changes: next.changes ?? [],
-          vendors: next.vendors?.length ? next.vendors : [...SEED_VENDORS],
+          vendors: mergeSeedVendors(next.vendors?.length ? next.vendors : [...SEED_VENDORS]),
+          homeColumns: next.homeColumns === 3 ? 3 : 2,
         };
         await saveState(merged);
         setState(merged);

@@ -11,7 +11,20 @@ export const SEED_VENDORS: Vendor[] = [
   { id: 'v_mister_oli', name: 'Mister Oli', isSeed: true, createdAt: todayIso() },
   { id: 'v_bquik', name: 'B-Quik', isSeed: true, createdAt: todayIso() },
   { id: 'v_rotary', name: 'Rotary Auto', isSeed: true, createdAt: todayIso() },
+  { id: 'v_jaya_teknik_ac', name: 'Jaya Teknik AC', isSeed: true, createdAt: todayIso() },
+  { id: 'v_shell', name: 'Shell', isSeed: true, createdAt: todayIso() },
+  { id: 'v_toda', name: 'TODA', isSeed: true, createdAt: todayIso() },
+  { id: 'v_montir_panggilan_mas_hasan', name: 'Montir Panggilan Mas Hasan', isSeed: true, createdAt: todayIso() },
 ];
+
+export function mergeSeedVendors(existing: Vendor[]): Vendor[] {
+  const names = new Set(existing.map((v) => v.name.trim().toLowerCase()));
+  const ids = new Set(existing.map((v) => v.id));
+  const missing = SEED_VENDORS.filter(
+    (v) => !ids.has(v.id) && !names.has(v.name.trim().toLowerCase())
+  );
+  return missing.length ? [...existing, ...missing] : existing;
+}
 
 export function createSeedAssets(): Asset[] {
   const now = todayIso();
@@ -24,8 +37,9 @@ export function createSeedAssets(): Asset[] {
       model: 'Avanza',
       manufactureYear: 2019,
       purchaseYear: 2019,
+      purchaseAt: 'Toyota Astra',
       condition: 'working',
-      serviceOverride: null,
+      location: 'home',
       nextServiceAt: addDaysIso(now, 10),
       usageEnabled: true,
       usageCurrent: 45200,
@@ -43,8 +57,9 @@ export function createSeedAssets(): Asset[] {
       model: 'FTKC25',
       manufactureYear: 2021,
       purchaseYear: 2022,
+      purchaseAt: 'Tokopedia',
       condition: 'needs_attention',
-      serviceOverride: null,
+      location: 'home',
       nextServiceAt: addDaysIso(now, 45),
       usageEnabled: false,
       usageCurrent: null,
@@ -62,8 +77,9 @@ export function createSeedAssets(): Asset[] {
       model: 'Andris',
       manufactureYear: 2020,
       purchaseYear: 2020,
+      purchaseAt: 'Shopee',
       condition: 'working',
-      serviceOverride: null,
+      location: 'home',
       nextServiceAt: addDaysIso(now, -12),
       usageEnabled: false,
       usageCurrent: null,
@@ -76,6 +92,15 @@ export function createSeedAssets(): Asset[] {
   ];
 }
 
+export const PURCHASE_AT_OPTIONS: string[] = [
+  'Shopee',
+  'Tokopedia',
+  'Blibli',
+  'Lazada',
+  'Official Dealer',
+  'Secondhand',
+];
+
 export const BRANDS_BY_TYPE: Record<string, string[]> = {
   car: [
     'Toyota',
@@ -87,8 +112,19 @@ export const BRANDS_BY_TYPE: Record<string, string[]> = {
     'Mazda',
     'Hyundai',
     'Wuling',
+    'BYD',
+    'Chery',
+    'MG',
+    'DFSK',
+    'Haval',
+    'GAC',
+    'Geely',
     'BMW',
     'Mercedes-Benz',
+    'Kia',
+    'Subaru',
+    'Isuzu',
+    'Ford',
   ],
   motorcycle: ['Honda', 'Yamaha', 'Suzuki', 'Kawasaki', 'Vespa', 'BMW'],
   bike: ['Polygon', 'United', 'Giant', 'Trek', 'Pacific'],

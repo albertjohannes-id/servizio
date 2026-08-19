@@ -159,13 +159,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(28,26,23,0.35)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
   },
   sheet: {
+    width: '100%',
+    maxWidth: 300,
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: colors.line,
+    borderRadius: 12,
   },
   monthRow: {
     flexDirection: 'row',
@@ -174,8 +178,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   month: { fontSize: 16, fontWeight: '600', color: colors.text },
-  nav: { fontSize: 28, color: colors.text, paddingHorizontal: 8 },
-  weekRow: { flexDirection: 'row', marginBottom: 6 },
+  nav: { fontSize: 22, color: colors.text, paddingHorizontal: 6 },
+  weekRow: { flexDirection: 'row', marginBottom: 4 },
   weekday: {
     flex: 1,
     textAlign: 'center',
@@ -186,7 +190,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: {
     width: '14.28%',
-    aspectRatio: 1,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -10,6 +10,10 @@ export const colors = {
   warn: '#8A5A12',
   ok: '#1F8A45',
   line: '#E4DFD6',
+  tileOverdue: '#F3D4CB',
+  tileDueSoon: '#F4E2BE',
+  tileOnTrack: '#D5EBDA',
+  tileInService: '#E6E2DA',
 };
 
 export const spacing = {

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PIN_LENGTH } from '../data/pinAuth';
 import { colors, spacing } from '../theme';
 
@@ -27,17 +27,40 @@ export function PinPad({ title, subtitle, error, disabled, onComplete, onChange 
     [digits]
   );
 
-  const pressDigit = (value: string) => {
-    if (disabled || digits.length >= PIN_LENGTH) return;
-    onChange?.();
-    setDigits((prev) => prev + value);
-  };
+  const pressDigit = useCallback(
+    (value: string) => {
+      if (disabled) return;
+      onChange?.();
+      setDigits((prev) => (prev.length >= PIN_LENGTH ? prev : prev + value));
+    },
+    [disabled, onChange]
+  );
 
-  const backspace = () => {
+  const backspace = useCallback(() => {
     if (disabled) return;
     onChange?.();
     setDigits((prev) => prev.slice(0, -1));
-  };
+  }, [disabled, onChange]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        pressDigit(event.key);
+        return;
+      }
+      if (event.key === 'Backspace') {
+        event.preventDefault();
+        backspace();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [backspace, pressDigit]);
 
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 

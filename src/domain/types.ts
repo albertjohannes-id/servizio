@@ -8,11 +8,9 @@ export type AssetType =
 
 export type ConditionStatus = 'working' | 'needs_attention' | 'not_working';
 
-export type ServiceStatus =
-  | 'on_schedule'
-  | 'due_soon'
-  | 'overdue'
-  | 'in_service';
+export type AssetLocation = 'home' | 'service_center';
+
+export type ServiceStatus = 'on_schedule' | 'due_soon' | 'overdue';
 
 export interface Asset {
   id: string;
@@ -24,9 +22,10 @@ export interface Asset {
   model: string;
   manufactureYear: number | null;
   purchaseYear: number | null;
+  purchaseAt: string;
   condition: ConditionStatus;
-  /** When set to in_service, overrides computed schedule status */
-  serviceOverride: 'in_service' | null;
+  /** Where the asset is right now */
+  location: AssetLocation;
   nextServiceAt: string; // YYYY-MM-DD
   usageEnabled: boolean;
   usageCurrent: number | null;
@@ -63,6 +62,7 @@ export type ChangeField =
   | 'usageNextDue'
   | 'usageInterval'
   | 'usageEnabled'
+  | 'location'
   | 'in_service';
 
 export interface AssetChange {
@@ -95,6 +95,7 @@ export interface AppState {
   vendors: Vendor[];
   events: AppEvent[];
   language: 'en' | 'id';
+  homeColumns: 2 | 3;
 }
 
 export const DUE_SOON_DAYS = 14;

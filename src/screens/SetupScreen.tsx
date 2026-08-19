@@ -98,8 +98,14 @@ export function SetupScreen() {
               ))}
             </View>
           </View>
-          <Text style={styles.mark}>{t.appName}</Text>
-          <Text style={styles.lead}>{step === 'sample' ? t.sampleLead : t.setupLead}</Text>
+          <Text style={styles.mark}>
+            {step === 'pin' ? t.createPin : step === 'confirm' ? t.confirmPin : t.appName}
+          </Text>
+          {step === 'email' ? (
+            <Text style={styles.lead}>{t.setupLead}</Text>
+          ) : step === 'sample' ? (
+            <Text style={styles.lead}>{t.sampleLead}</Text>
+          ) : null}
         </View>
 
         {step === 'email' ? (
@@ -128,15 +134,15 @@ export function SetupScreen() {
           <View style={styles.sampleBlock}>
             <Text style={styles.sampleBody}>{t.sampleBody}</Text>
             <PrimaryButton
-              label={t.startWithSample}
-              onPress={() => void finishSetup(true)}
+              label={t.startEmpty}
+              onPress={() => void finishSetup(false)}
               loading={busy}
               disabled={busy}
             />
             <PrimaryButton
-              label={t.startEmpty}
+              label={t.startWithSample}
               variant="ghost"
-              onPress={() => void finishSetup(false)}
+              onPress={() => void finishSetup(true)}
               disabled={busy}
             />
             <Pressable

@@ -8,7 +8,6 @@ import { colors, spacing } from '../theme';
 const ACCENT: Record<ServiceStatus, { ink: string; wash: string }> = {
   overdue: { ink: colors.danger, wash: '#F3E6E1' },
   due_soon: { ink: colors.warn, wash: '#F4EBD9' },
-  in_service: { ink: colors.text, wash: '#E8E6E0' },
   on_schedule: { ink: colors.ok, wash: '#D4EEDC' },
 };
 

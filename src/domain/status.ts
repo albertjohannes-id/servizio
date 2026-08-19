@@ -44,10 +44,10 @@ export function addDaysIso(isoDate: string, days: number): string {
   return todayIso(new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
 }
 
-/** Pure schedule status from date + optional km (ignores in_service override). */
-export function computeScheduleStatus(asset: Asset, now = new Date()): Exclude<ServiceStatus, 'in_service'> {
+/** Schedule status from date + optional km. Location is separate. */
+export function computeScheduleStatus(asset: Asset, now = new Date()): ServiceStatus {
   const dayDelta = daysUntil(asset.nextServiceAt, now);
-  let dateStatus: Exclude<ServiceStatus, 'in_service'> = 'on_schedule';
+  let dateStatus: ServiceStatus = 'on_schedule';
   if (dayDelta < 0) dateStatus = 'overdue';
   else if (dayDelta <= DUE_SOON_DAYS) dateStatus = 'due_soon';
 
@@ -59,7 +59,7 @@ export function computeScheduleStatus(asset: Asset, now = new Date()): Exclude<S
     asset.usageInterval > 0
   ) {
     const remaining = asset.usageNextDue - asset.usageCurrent;
-    let usageStatus: Exclude<ServiceStatus, 'in_service'> = 'on_schedule';
+    let usageStatus: ServiceStatus = 'on_schedule';
     if (remaining <= 0) usageStatus = 'overdue';
     else if (remaining <= asset.usageInterval * USAGE_DUE_SOON_RATIO) usageStatus = 'due_soon';
 
@@ -71,7 +71,6 @@ export function computeScheduleStatus(asset: Asset, now = new Date()): Exclude<S
 }
 
 export function resolveServiceStatus(asset: Asset, now = new Date()): ServiceStatus {
-  if (asset.serviceOverride === 'in_service') return 'in_service';
   return computeScheduleStatus(asset, now);
 }
 
@@ -80,10 +79,14 @@ export function sortAssetsForHome(assets: Asset[], now = new Date()): Asset[] {
     const s = resolveServiceStatus(a, now);
     if (s === 'overdue') return 0;
     if (s === 'due_soon') return 1;
-    if (s === 'in_service') return 2;
-    return 3;
+    return 2;
   };
   return [...assets]
     .filter((a) => !a.archived)
-    .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (a.location === 'service_center' ? 0 : 1) - (b.location === 'service_center' ? 0 : 1) ||
+        a.name.localeCompare(b.name)
+    );
 }

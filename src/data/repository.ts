@@ -8,8 +8,8 @@
  * the same AppState shape (assets, service_logs, vendors) to Postgres.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from '../domain/types';
-import { createSeedAssets, SEED_VENDORS } from './seed';
+import { AppState, Asset, AssetLocation } from '../domain/types';
+import { createSeedAssets, mergeSeedVendors, SEED_VENDORS } from './seed';
 
 export const STORAGE_DRIVER = 'local' as const;
 
@@ -23,17 +23,32 @@ export function blankState(language: AppState['language'] = 'en'): AppState {
     events: [],
     changes: [],
     language,
+    homeColumns: 2,
   };
 }
 
 export function sampleState(language: AppState['language'] = 'en'): AppState {
   return {
+    ...blankState(language),
     assets: createSeedAssets(),
-    logs: [],
-    vendors: [...SEED_VENDORS],
-    events: [],
-    changes: [],
-    language,
+  };
+}
+
+export function normalizeAsset(
+  a: Asset & { serviceOverride?: 'in_service' | null }
+): Asset {
+  const location: AssetLocation =
+    a.location === 'service_center' || a.serviceOverride === 'in_service'
+      ? 'service_center'
+      : 'home';
+  return {
+    ...a,
+    brand: a.brand ?? '',
+    model: a.model ?? '',
+    manufactureYear: a.manufactureYear ?? null,
+    purchaseYear: a.purchaseYear ?? null,
+    purchaseAt: a.purchaseAt ?? '',
+    location,
   };
 }
 
@@ -55,15 +70,12 @@ export async function loadState(): Promise<AppState> {
         ...log,
         serviceTagUri: log.serviceTagUri ?? null,
       })),
-      assets: (parsed.assets ?? []).map((a) => ({
-        ...a,
-        brand: a.brand ?? '',
-        model: a.model ?? '',
-        manufactureYear: a.manufactureYear ?? null,
-        purchaseYear: a.purchaseYear ?? null,
-      })),
+      assets: (parsed.assets ?? []).map((a) =>
+        normalizeAsset(a as Asset & { serviceOverride?: 'in_service' | null })
+      ),
       changes: parsed.changes ?? [],
-      vendors: parsed.vendors.length ? parsed.vendors : [...SEED_VENDORS],
+      vendors: mergeSeedVendors(parsed.vendors.length ? parsed.vendors : [...SEED_VENDORS]),
+      homeColumns: parsed.homeColumns === 3 ? 3 : 2,
     };
   } catch {
     return blankState();

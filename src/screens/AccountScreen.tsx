@@ -48,7 +48,7 @@ function MenuRow({
 
 export function AccountScreen({ navigation }: Props) {
   const { email, lock } = useAuth();
-  const { state, importState, setLanguage } = useAssets();
+  const { state, importState, setLanguage, setHomeColumns } = useAssets();
   const t = dictionaries[state.language];
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -152,6 +152,23 @@ export function AccountScreen({ navigation }: Props) {
         />
       </View>
       {message ? <Text style={styles.message}>{message}</Text> : null}
+
+      <Text style={styles.sectionLabel}>{t.appearance}</Text>
+      <View style={styles.langRow}>
+        {([2, 3] as const).map((columns) => (
+          <Pressable
+            key={columns}
+            onPress={() => setHomeColumns(columns)}
+            style={[styles.langChip, state.homeColumns === columns && styles.langChipOn]}
+          >
+            <Text
+              style={[styles.langChipText, state.homeColumns === columns && styles.langChipTextOn]}
+            >
+              {columns === 2 ? t.gridTwo : t.gridThree}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       <Text style={styles.sectionLabel}>{t.language}</Text>
       <View style={styles.langRow}>

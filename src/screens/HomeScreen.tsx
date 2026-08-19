@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  LayoutChangeEvent,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,11 +13,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../data/AuthContext';
 import { useAssets } from '../data/AssetContext';
 import { syncAssetReminders } from '../data/notifications';
-import { resolveServiceStatus } from '../domain/status';
-import { Asset, ServiceStatus } from '../domain/types';
-import { Dictionary, dictionaries } from '../i18n/strings';
-import { SectionHeader } from '../components/SectionHeader';
-import { AssetRow } from '../components/AssetRow';
+import { sortAssetsForHome } from '../domain/status';
+import { dictionaries } from '../i18n/strings';
+import { AssetTile } from '../components/AssetTile';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { RootStackParamList } from '../navigation/types';
 import { Copyright } from '../components/Copyright';
@@ -24,42 +23,24 @@ import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-type ListItem =
-  | { key: string; kind: 'header'; title: string; status: ServiceStatus; count: number }
-  | { key: string; kind: 'asset'; asset: Asset };
-
-function buildList(assets: Asset[], t: Dictionary): ListItem[] {
-  const order: { status: ServiceStatus; title: string }[] = [
-    { status: 'overdue', title: t.sectionOverdue },
-    { status: 'due_soon', title: t.sectionDueSoon },
-    { status: 'in_service', title: t.sectionInService },
-    { status: 'on_schedule', title: t.sectionOnTrack },
-  ];
-  const active = assets.filter((a) => !a.archived);
-  const items: ListItem[] = [];
-  for (const group of order) {
-    const rows = active.filter((a) => resolveServiceStatus(a) === group.status);
-    if (!rows.length) continue;
-    items.push({
-      key: `h-${group.status}`,
-      kind: 'header',
-      title: group.title,
-      status: group.status,
-      count: rows.length,
-    });
-    for (const asset of rows) {
-      items.push({ key: asset.id, kind: 'asset', asset });
-    }
-  }
-  return items;
-}
+const GRID_GAP = 12;
 
 export function HomeScreen({ navigation }: Props) {
   const { email } = useAuth();
   const { ready, state, setLanguage } = useAssets();
   const t = dictionaries[state.language];
   const insets = useSafeAreaInsets();
-  const items = useMemo(() => buildList(state.assets, t), [state.assets, t]);
+  const assets = useMemo(() => sortAssetsForHome(state.assets), [state.assets]);
+  const [gridWidth, setGridWidth] = useState(0);
+  const columns = state.homeColumns === 3 ? 3 : 2;
+
+  const tileSize =
+    gridWidth > 0 ? (gridWidth - GRID_GAP * (columns - 1)) / columns : 0;
+
+  const onGridLayout = (event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.width;
+    if (Math.abs(next - gridWidth) > 1) setGridWidth(next);
+  };
 
   useEffect(() => {
     if (ready) void syncAssetReminders(state.assets);
@@ -75,81 +56,101 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.mark}>{t.appName}</Text>
-        <View style={styles.langRow}>
-          {(['en', 'id'] as const).map((lang) => (
-            <Pressable key={lang} onPress={() => setLanguage(lang)} hitSlop={8}>
-              <Text style={[styles.lang, state.language === lang && styles.langOn]}>
-                {lang.toUpperCase()}
-              </Text>
-            </Pressable>
-          ))}
+      <View style={styles.column}>
+        <View style={styles.header}>
+          <Text style={styles.mark}>{t.appName}</Text>
+          <View style={styles.langRow}>
+            {(['en', 'id'] as const).map((lang) => (
+              <Pressable key={lang} onPress={() => setLanguage(lang)} hitSlop={8}>
+                <Text style={[styles.lang, state.language === lang && styles.langOn]}>
+                  {lang.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      </View>
 
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.key}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 130 + insets.bottom }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
-            <Text style={styles.emptyBody}>{t.emptyBody}</Text>
-            <View style={styles.emptyCta}>
-              <PrimaryButton label={t.addAsset} onPress={() => navigation.navigate('AddEditAsset')} />
-            </View>
-          </View>
-        }
-        renderItem={({ item, index }) =>
-          item.kind === 'header' ? (
-            <SectionHeader
-              title={item.title}
-              count={item.count}
-              status={item.status}
-              first={index === 0}
-            />
-          ) : (
-            <AssetRow
-              asset={item.asset}
-              t={t}
-              lang={state.language}
-              onPress={() => navigation.navigate('AssetDetail', { assetId: item.asset.id })}
-            />
-          )
-        }
-      />
-
-      <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>
-        <PrimaryButton label={t.addAsset} onPress={() => navigation.navigate('AddEditAsset')} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.account}
-          onPress={() => navigation.navigate('Account')}
-          style={({ pressed }) => [styles.profileRow, pressed && styles.profilePressed]}
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 16 }}
+          style={styles.scroll}
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>{(email?.[0] ?? 'S').toUpperCase()}</Text>
-          </View>
-          <View style={styles.profileText}>
-            <Text style={styles.profileLabel}>{t.account}</Text>
-            <Text style={styles.profileEmail} numberOfLines={1}>
-              {email}
-            </Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-        <Copyright />
+          {assets.length ? (
+            <>
+              <View style={styles.legend}>
+                <LegendDot color={colors.tileOverdue} label={t.sectionOverdue} />
+                <LegendDot color={colors.tileDueSoon} label={t.sectionDueSoon} />
+                <LegendDot color={colors.tileOnTrack} label={t.sectionOnTrack} />
+              </View>
+              <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
+                {tileSize > 0
+                  ? assets.map((asset) => (
+                      <AssetTile
+                        key={asset.id}
+                        asset={asset}
+                        t={t}
+                        lang={state.language}
+                        size={tileSize}
+                        compact={columns === 3}
+                        onPress={() => navigation.navigate('AssetDetail', { assetId: asset.id })}
+                      />
+                    ))
+                  : null}
+              </View>
+            </>
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
+              <Text style={styles.emptyBody}>{t.emptyBody}</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>
+          <PrimaryButton label={t.addAsset} onPress={() => navigation.navigate('AddEditAsset')} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.account}
+            onPress={() => navigation.navigate('Account')}
+            style={({ pressed }) => [styles.profileRow, pressed && styles.profilePressed]}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarLetter}>{(email?.[0] ?? 'S').toUpperCase()}</Text>
+            </View>
+            <View style={styles.profileText}>
+              <Text style={styles.profileLabel}>{t.account}</Text>
+              <Text style={styles.profileEmail} numberOfLines={1}>
+                {email}
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+          <Copyright />
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendSwatch, { backgroundColor: color }]} />
+      <Text style={styles.legendLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  column: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
     flexDirection: 'row',
@@ -160,12 +161,16 @@ const styles = StyleSheet.create({
   langRow: { flexDirection: 'row', gap: 14 },
   lang: { fontSize: 13, color: colors.muted },
   langOn: { color: colors.text, textDecorationLine: 'underline' },
+  scroll: { flex: 1 },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: spacing.md },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendSwatch: { width: 12, height: 12, borderRadius: 3 },
+  legendLabel: { fontSize: 12, color: colors.muted },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
   empty: { paddingTop: spacing.xl },
   emptyTitle: { fontSize: 18, color: colors.text },
   emptyBody: { marginTop: 8, fontSize: 15, color: colors.muted, lineHeight: 22 },
-  emptyCta: { marginTop: spacing.lg },
   footer: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,

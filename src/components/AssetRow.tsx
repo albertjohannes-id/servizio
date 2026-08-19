@@ -10,7 +10,6 @@ import { colors, spacing } from '../theme';
 function dueLine(asset: Asset, t: Dictionary, lang: Lang): { text: string; color: string } {
   const service = resolveServiceStatus(asset);
   const days = daysUntil(asset.nextServiceAt);
-  if (service === 'in_service') return { text: t.in_service, color: colors.muted };
   if (service === 'overdue') {
     return { text: t.daysLate.replace('{n}', formatInt(Math.abs(days), lang)), color: colors.danger };
   }

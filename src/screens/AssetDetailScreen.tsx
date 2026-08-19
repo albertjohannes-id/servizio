@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -14,11 +15,12 @@ import { useAssets } from '../data/AssetContext';
 import { brandModelLine, formatInt, formatKm, parseNumber, yearLine } from '../domain/format';
 import { TYPE_IMAGES } from '../data/typeImages';
 import { daysUntil, formatDate, formatDateTime, resolveServiceStatus } from '../domain/status';
-import { AssetChange, ChangeField } from '../domain/types';
+import { AssetChange, ChangeField, ServiceLog } from '../domain/types';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { NumberField } from '../components/NumberField';
 import { ConditionPicker } from '../components/ConditionPicker';
+import { LocationPicker } from '../components/LocationPicker';
 import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
@@ -37,8 +39,14 @@ const FIELD_LABEL: Record<ChangeField, keyof Dictionary> = {
   usageNextDue: 'fieldUsageNextDue',
   usageInterval: 'fieldUsageInterval',
   usageEnabled: 'fieldUsageEnabled',
-  in_service: 'fieldInService',
+  location: 'fieldLocation',
+  in_service: 'fieldLocation',
 };
+
+function fieldLabel(field: ChangeField, t: Dictionary): string {
+  const key = FIELD_LABEL[field];
+  return key ? t[key] : field;
+}
 
 function formatChangeValue(
   field: ChangeField,
@@ -47,7 +55,7 @@ function formatChangeValue(
   lang: 'en' | 'id'
 ): string {
   if (value == null || value === '') {
-    if (field === 'in_service') return t.on_schedule;
+    if (field === 'in_service' || field === 'location') return t.locationHome;
     return t.valueEmpty;
   }
   if (field === 'km' || field === 'usageNextDue' || field === 'usageInterval') {
@@ -59,7 +67,10 @@ function formatChangeValue(
   }
   if (field === 'nextServiceAt' && typeof value === 'string') return formatDate(value);
   if (field === 'usageEnabled') return value ? t.valueOn : t.valueOff;
-  if (field === 'in_service') return t.in_service;
+  if (field === 'location' || field === 'in_service') {
+    if (value === 'service_center' || value === 'in_service') return t.locationServiceCenter;
+    return t.locationHome;
+  }
   return String(value);
 }
 
@@ -67,8 +78,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   const {
     state,
     setCondition,
-    setInService,
-    clearInService,
+    setLocation,
     updateUsage,
     restoreAsset,
     permanentlyDeleteAsset,
@@ -82,6 +92,8 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   );
   const [tab, setTab] = useState<HistoryTab>('service');
   const [savedVisible, setSavedVisible] = useState(!!route.params.showSaved);
+  const [openLog, setOpenLog] = useState<ServiceLog | null>(null);
+  const [openChange, setOpenChange] = useState<AssetChange | null>(null);
 
   React.useEffect(() => {
     if (savedVisible) {
@@ -164,6 +176,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           {yearLine(asset) ? <Text style={styles.spec}>{yearLine(asset)}</Text> : null}
           <Text style={styles.due}>
             {t[service]} · {dueNote}
+            {asset.location === 'service_center' ? ` · ${t.locationServiceCenter}` : ''}
           </Text>
         </View>
       </View>
@@ -177,6 +190,9 @@ export function AssetDetailScreen({ navigation, route }: Props) {
         <>
           <Text style={styles.label}>{t.condition}</Text>
           <ConditionPicker value={asset.condition} onChange={(next) => setCondition(asset.id, next)} t={t} />
+
+          <Text style={styles.label}>{t.location}</Text>
+          <LocationPicker value={asset.location} onChange={(next) => setLocation(asset.id, next)} t={t} />
 
           {asset.usageEnabled ? (
             <View style={styles.block}>
@@ -204,19 +220,6 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           ) : null}
 
           <View style={styles.actions}>
-            {service === 'in_service' ? (
-              <PrimaryButton
-                label={t.clearInService}
-                variant="ghost"
-                onPress={() => clearInService(asset.id)}
-              />
-            ) : (
-              <PrimaryButton
-                label={t.markInService}
-                variant="ghost"
-                onPress={() => setInService(asset.id)}
-              />
-            )}
             <PrimaryButton
               label={t.logServiceNow}
               onPress={() => navigation.navigate('LogService', { assetId: asset.id })}
@@ -254,36 +257,149 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           <Text style={styles.meta}>{t.noHistory}</Text>
         ) : (
           logs.map((log) => (
-            <View key={log.id} style={styles.history}>
-              <Text style={styles.historyDate}>{formatDate(log.servicedAt)}</Text>
-              {log.notes ? <Text style={styles.meta}>{log.notes}</Text> : null}
-              {log.cost != null ? (
-                <Text style={styles.meta}>{formatInt(log.cost, state.language)}</Text>
+            <Pressable
+              key={log.id}
+              onPress={() => setOpenLog(log)}
+              accessibilityRole="button"
+              accessibilityLabel={`${t.tabService} ${formatDate(log.servicedAt)}`}
+              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+            >
+              <View style={styles.cardTop}>
+                <Text style={styles.cardTitle}>{formatDate(log.servicedAt)}</Text>
+                {log.cost != null ? (
+                  <Text style={styles.cardCost}>{formatInt(log.cost, state.language)}</Text>
+                ) : null}
+              </View>
+              {log.vendorName ? <Text style={styles.cardSub}>{log.vendorName}</Text> : null}
+              {log.notes ? (
+                <Text style={styles.cardNotes} numberOfLines={2}>
+                  {log.notes}
+                </Text>
               ) : null}
-              {log.vendorName ? <Text style={styles.meta}>{log.vendorName}</Text> : null}
-              {log.receiptUri ? <Image source={{ uri: log.receiptUri }} style={styles.thumb} /> : null}
-              {log.serviceTagUri ? (
-                <Image source={{ uri: log.serviceTagUri }} style={styles.thumb} />
-              ) : null}
-            </View>
+              <Text style={styles.cardHint}>{t.tapForDetails}</Text>
+            </Pressable>
           ))
         )
       ) : changes.length === 0 ? (
         <Text style={styles.meta}>{t.noChanges}</Text>
       ) : (
         changes.map((change) => (
-          <View key={change.id} style={styles.history}>
-            <Text style={styles.changeField}>{t[FIELD_LABEL[change.field]]}</Text>
-            <Text style={styles.historyDate}>
-              {t.changeArrow
-                .replace('{old}', formatChangeValue(change.field, change.oldValue, t, state.language))
-                .replace('{new}', formatChangeValue(change.field, change.newValue, t, state.language))}
-            </Text>
-            <Text style={styles.meta}>{formatDateTime(change.createdAt)}</Text>
-          </View>
+          <Pressable
+            key={change.id}
+            onPress={() => setOpenChange(change)}
+            accessibilityRole="button"
+            accessibilityLabel={fieldLabel(change.field, t)}
+            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+          >
+            <Text style={styles.changeField}>{fieldLabel(change.field, t)}</Text>
+            <View style={styles.fromTo}>
+              <View style={styles.fromToCol}>
+                <Text style={styles.fromToLabel}>{t.changeFrom}</Text>
+                <Text style={styles.fromToValue}>
+                  {formatChangeValue(change.field, change.oldValue, t, state.language)}
+                </Text>
+              </View>
+              <Text style={styles.fromToArrow}>→</Text>
+              <View style={styles.fromToCol}>
+                <Text style={styles.fromToLabel}>{t.changeTo}</Text>
+                <Text style={styles.fromToValue}>
+                  {formatChangeValue(change.field, change.newValue, t, state.language)}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.cardSub}>{formatDateTime(change.createdAt)}</Text>
+          </Pressable>
         ))
       )}
+
+      <Modal
+        visible={!!openLog || !!openChange}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setOpenLog(null);
+          setOpenChange(null);
+        }}
+      >
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => {
+            setOpenLog(null);
+            setOpenChange(null);
+          }}
+        >
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation?.()}>
+            {openLog ? (
+              <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetInner}>
+                <Text style={styles.sheetKicker}>{t.serviceDate}</Text>
+                <Text style={styles.sheetTitle}>{formatDate(openLog.servicedAt)}</Text>
+                <View style={styles.sheetBlock}>
+                  <DetailRow label={t.vendor} value={openLog.vendorName} />
+                  <DetailRow
+                    label={t.costShort}
+                    value={openLog.cost != null ? formatInt(openLog.cost, state.language) : t.noCost}
+                  />
+                  <DetailRow label={t.notes} value={openLog.notes?.trim() ? openLog.notes : t.noNotes} />
+                  <DetailRow label={t.loggedAt} value={formatDateTime(openLog.createdAt)} />
+                </View>
+                {openLog.receiptUri ? (
+                  <View style={styles.photoBlock}>
+                    <Text style={styles.detailLabel}>{t.receipt}</Text>
+                    <Image source={{ uri: openLog.receiptUri }} style={styles.sheetPhoto} />
+                  </View>
+                ) : null}
+                {openLog.serviceTagUri ? (
+                  <View style={styles.photoBlock}>
+                    <Text style={styles.detailLabel}>{t.serviceTag}</Text>
+                    <Image source={{ uri: openLog.serviceTagUri }} style={styles.sheetPhoto} />
+                  </View>
+                ) : null}
+                <PrimaryButton
+                  label={t.done}
+                  onPress={() => {
+                    setOpenLog(null);
+                    setOpenChange(null);
+                  }}
+                />
+              </ScrollView>
+            ) : openChange ? (
+              <View style={styles.sheetInner}>
+                <Text style={styles.sheetKicker}>{t.tabChanges}</Text>
+                <Text style={styles.sheetTitle}>{fieldLabel(openChange.field, t)}</Text>
+                <View style={styles.sheetBlock}>
+                  <DetailRow
+                    label={t.changeFrom}
+                    value={formatChangeValue(openChange.field, openChange.oldValue, t, state.language)}
+                  />
+                  <DetailRow
+                    label={t.changeTo}
+                    value={formatChangeValue(openChange.field, openChange.newValue, t, state.language)}
+                  />
+                  <DetailRow label={t.loggedAt} value={formatDateTime(openChange.createdAt)} />
+                </View>
+                <PrimaryButton
+                  label={t.done}
+                  onPress={() => {
+                    setOpenLog(null);
+                    setOpenChange(null);
+                  }}
+                />
+              </View>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
   );
 }
 
@@ -350,13 +466,27 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   tabLabelOn: { color: colors.text },
-  meta: { fontSize: 14, color: colors.muted, marginTop: 2 },
-  history: {
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.line,
+  meta: { fontSize: 14, color: colors.muted, marginTop: 12 },
+  card: {
+    marginTop: 10,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  historyDate: { fontSize: 16, color: colors.text },
+  cardPressed: { opacity: 0.75 },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 12,
+  },
+  cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  cardCost: { fontSize: 15, fontWeight: '600', color: colors.text },
+  cardSub: { marginTop: 4, fontSize: 14, color: colors.muted },
+  cardNotes: { marginTop: 6, fontSize: 14, color: colors.text, lineHeight: 20 },
+  cardHint: { marginTop: 8, fontSize: 12, color: colors.muted },
   changeField: {
     fontSize: 12,
     color: colors.muted,
@@ -364,5 +494,56 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 4,
   },
-  thumb: { width: '100%', height: 140, marginTop: 8, backgroundColor: colors.border },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(28,26,23,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  sheet: {
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '86%',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    overflow: 'hidden',
+  },
+  sheetScroll: { maxHeight: 520 },
+  sheetInner: { padding: 18, gap: 12 },
+  sheetKicker: {
+    fontSize: 12,
+    color: colors.muted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  sheetTitle: { fontSize: 22, fontWeight: '600', color: colors.text, letterSpacing: -0.3 },
+  sheetBlock: {
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+  },
+  detailRow: { gap: 2 },
+  detailLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  detailValue: { fontSize: 16, color: colors.text, lineHeight: 22 },
+  photoBlock: { gap: 6 },
+  sheetPhoto: { width: '100%', height: 160, borderRadius: 8, backgroundColor: colors.border },
+  fromTo: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  fromToCol: { flex: 1, gap: 2 },
+  fromToLabel: {
+    fontSize: 11,
+    color: colors.muted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  fromToValue: { fontSize: 15, fontWeight: '600', color: colors.text },
+  fromToArrow: { marginTop: 16, fontSize: 16, color: colors.muted },
 });

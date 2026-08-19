@@ -176,6 +176,7 @@ export function AccountScreen({ navigation }: Props) {
         <PrimaryButton
           label={t.debug}
           variant="ghost"
+          style={styles.debugButton}
           onPress={() => navigation.navigate('DebugMetrics')}
         />
       </View>
@@ -249,6 +250,7 @@ const styles = StyleSheet.create({
   langChipText: { fontSize: 13, color: colors.muted, fontWeight: '500' },
   langChipTextOn: { color: colors.primaryText },
   misc: { marginTop: spacing.lg, alignItems: 'flex-start' },
+  debugButton: { paddingHorizontal: 0, minHeight: 36 },
   footer: { marginTop: spacing.xl, gap: 8 },
   version: { fontSize: 12, color: colors.muted },
 });

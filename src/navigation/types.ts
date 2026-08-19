@@ -6,6 +6,6 @@ export type RootStackParamList = {
   ArchivedAssets: undefined;
   AddEditAsset: { assetId?: string } | undefined;
   AssetDetail: { assetId: string; showSaved?: boolean };
-  LogService: { assetId: string; fromTag?: boolean };
+  LogService: { assetId: string };
   DebugMetrics: undefined;
 };

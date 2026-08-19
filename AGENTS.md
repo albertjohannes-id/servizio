@@ -12,7 +12,7 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
   - **Schedule** — On Schedule / Due Soon / Overdue (from next-service date and optional km).
   - **Location** — Home / Service Center (where it is). Logging a service sets location back to Home.
 - Due Soon: 14 days or ~10% of km interval left.
-- Service tag (stiker servis): photo of the workshop sticker; user copies dates. **No OCR.**
+- Log service is a **single form** (dates, notes, cost, optional receipt, vendor). No service-tag photo path, no OCR.
 - Auth: **local only**. One profile per device — email + 6-digit PIN (PBKDF2 hash + salt in `servizio_v1_auth`). Unlock session `servizio_v1_unlock` expires after 1 hour idle. Logout = lock (PIN again). After 10 wrong PINs, user may reset device (wipes local data). JSON backup/export on Account; photos are not included. Archive is soft-hide; Account → Archived assets can restore or permanently delete.
 - First run: start empty (primary) or load sample data.
 - Copy: EN/ID. Public footer mark is **Inovateks** only (no legal entity names).

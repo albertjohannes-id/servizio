@@ -47,8 +47,10 @@ export function LocationPicker({
             accessibilityLabel={t[item.title]}
           >
             <Image source={item.image} style={styles.icon} resizeMode="contain" />
-            <Text style={[styles.title, on && styles.titleOn]}>{t[item.title]}</Text>
-            <Text style={styles.hint}>{t[item.hint]}</Text>
+            <View style={styles.copy}>
+              <Text style={[styles.title, on && styles.titleOn]}>{t[item.title]}</Text>
+              <Text style={styles.hint}>{t[item.hint]}</Text>
+            </View>
           </Pressable>
         );
       })}
@@ -60,17 +62,20 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', gap: 8, marginTop: 4 },
   card: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.surface,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderRadius: 12,
-    alignItems: 'center',
   },
   cardOn: { borderColor: colors.text, backgroundColor: '#E8E6E0' },
-  icon: { width: 40, height: 40, marginBottom: 6 },
-  title: { fontSize: 14, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  icon: { width: 32, height: 32 },
+  copy: { flex: 1, minWidth: 0 },
+  title: { fontSize: 13, fontWeight: '600', color: colors.text },
   titleOn: { color: colors.text },
-  hint: { marginTop: 4, fontSize: 11, color: colors.muted, lineHeight: 15, textAlign: 'center' },
+  hint: { marginTop: 2, fontSize: 11, color: colors.muted, lineHeight: 14 },
 });

@@ -9,14 +9,15 @@ import { AssetDetailScreen } from '../screens/AssetDetailScreen';
 import { DebugMetricsScreen } from '../screens/DebugMetricsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LogServiceScreen } from '../screens/LogServiceScreen';
-import { LoginScreen } from '../screens/LoginScreen';
+import { SetupScreen } from '../screens/SetupScreen';
+import { UnlockScreen } from '../screens/UnlockScreen';
 import { colors } from '../theme';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { ready, email } = useAuth();
+  const { ready, gate } = useAuth();
 
   if (!ready) {
     return (
@@ -38,7 +39,7 @@ export function RootNavigator() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        {email ? (
+        {gate === 'unlocked' ? (
           <>
             <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
@@ -47,8 +48,10 @@ export function RootNavigator() {
             <Stack.Screen name="LogService" component={LogServiceScreen} options={{ title: '' }} />
             <Stack.Screen name="DebugMetrics" component={DebugMetricsScreen} options={{ title: '' }} />
           </>
+        ) : gate === 'locked' ? (
+          <Stack.Screen name="Unlock" component={UnlockScreen} options={{ headerShown: false }} />
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Setup" component={SetupScreen} options={{ headerShown: false }} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

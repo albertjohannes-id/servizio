@@ -16,7 +16,8 @@ Requires Node 20+.
 
 ## What this MVP does
 
-- Mock login (any valid email, no password, no server)
+- Mock login: any valid email, no password, no server.
+- **6-digit PIN** (hashed locally). Lock after 1 hour idle. Export/import JSON backup from Account.
 - Assets with kind, brand, type/model, manufacture year, purchase year
 - Dual status: **condition** (manual) and **service** (On Track / Due Soon / Overdue / In Service)
 - Log a visit from a workshop **service tag photo** or by typing

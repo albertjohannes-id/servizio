@@ -17,7 +17,7 @@ import {
   Vendor,
 } from '../domain/types';
 import { todayIso } from '../domain/status';
-import { clearState, loadState, saveState } from './repository';
+import { clearState, emptyState, loadState, saveState } from './repository';
 import { createSeedAssets, SEED_VENDORS } from './seed';
 
 type AssetInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'serviceOverride'> & {
@@ -49,6 +49,7 @@ interface AssetContextValue {
   addVendor: (name: string) => Vendor;
   track: (eventType: string, payload?: Record<string, unknown>) => void;
   resetDemo: () => void;
+  importState: (next: AppState) => Promise<void>;
   logsFor: (assetId: string) => ServiceLog[];
   changesFor: (assetId: string) => AssetChange[];
 }
@@ -298,6 +299,27 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
           language: s.language,
         };
         void clearState().then(() => setState(next));
+      },
+      importState: async (next) => {
+        const merged: AppState = {
+          ...emptyState(),
+          ...next,
+          logs: (next.logs ?? []).map((log) => ({
+            ...log,
+            serviceTagUri: log.serviceTagUri ?? null,
+          })),
+          assets: (next.assets ?? []).map((a) => ({
+            ...a,
+            brand: a.brand ?? '',
+            model: a.model ?? '',
+            manufactureYear: a.manufactureYear ?? null,
+            purchaseYear: a.purchaseYear ?? null,
+          })),
+          changes: next.changes ?? [],
+          vendors: next.vendors?.length ? next.vendors : [...SEED_VENDORS],
+        };
+        await saveState(merged);
+        setState(merged);
       },
       logsFor: (assetId) => s.logs.filter((l) => l.assetId === assetId),
       changesFor: (assetId) => (s.changes ?? []).filter((c) => c.assetId === assetId),

@@ -1,5 +1,6 @@
 export type RootStackParamList = {
-  Login: undefined;
+  Setup: undefined;
+  Unlock: undefined;
   Home: undefined;
   Account: undefined;
   AddEditAsset: { assetId?: string } | undefined;

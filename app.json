@@ -40,7 +40,8 @@
           "cameraPermission": "Allow Servizio to photograph workshop service tags."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sharing"
     ]
   }
 }

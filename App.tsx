@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppShell } from './src/components/AppShell';
+import { ActivityTracker } from './src/components/ActivityTracker';
 import { AssetProvider } from './src/data/AssetContext';
 import { AuthProvider } from './src/data/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -26,9 +27,11 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <AssetProvider>
-          <AppShell>
-            <RootNavigator />
-          </AppShell>
+          <ActivityTracker>
+            <AppShell>
+              <RootNavigator />
+            </AppShell>
+          </ActivityTracker>
           <StatusBar style="dark" />
         </AssetProvider>
       </AuthProvider>

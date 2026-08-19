@@ -12,7 +12,7 @@ const en = {
   delete: 'Archive',
   assetDetail: 'Asset',
   logService: 'Log service',
-  markInService: 'Mark In Service',
+  markInService: 'At the shop',
   updateKm: 'Update km',
   nextDue: 'Next service',
   currentKm: 'Current km',
@@ -41,7 +41,7 @@ const en = {
   receiptAttached: 'Receipt attached',
   serviceTag: 'Service tag photo',
   serviceTagHint:
-    'Workshops often give a sticker with service date and next service. Photograph it, then copy the dates below. We do not auto-read the numbers yet.',
+    'Workshops often give a sticker with service date and next service. Photograph it, then copy the dates below.',
   takeTagPhoto: 'Take tag photo',
   pickTagPhoto: 'Choose from library',
   tagAttached: 'Service tag attached',
@@ -143,7 +143,7 @@ const en = {
   restoreConfirmBody: 'Put “{name}” back on Home?',
   viewDetails: 'View details',
   archivedBanner: 'This asset is archived. Restore it to edit or log service again.',
-  clearInService: 'Clear In Service',
+  clearInService: 'Back from shop',
   sampleLead: 'How do you want to start?',
   sampleBody:
     'Sample data includes a few demo assets so you can explore the app. You can archive or delete them later.',
@@ -182,6 +182,9 @@ const en = {
   changeMethod: 'Choose a different way',
   addTagPhoto: 'Add the service tag photo',
   addTagPhotoHint: 'Photograph the workshop sticker, then copy the dates below.',
+  assetNotFound: 'Asset not found.',
+  archiveConfirmTitle: 'Archive this asset?',
+  archiveConfirmBody: 'It will be moved to Archived. You can restore it later.',
 };
 
 const id: typeof en = {
@@ -196,7 +199,7 @@ const id: typeof en = {
   delete: 'Arsipkan',
   assetDetail: 'Aset',
   logService: 'Catat servis',
-  markInService: 'Tandai Sedang Diservice',
+  markInService: 'Di bengkel',
   updateKm: 'Perbarui km',
   nextDue: 'Servis berikutnya',
   currentKm: 'Km saat ini',
@@ -225,7 +228,7 @@ const id: typeof en = {
   receiptAttached: 'Nota terlampir',
   serviceTag: 'Foto stiker servis',
   serviceTagHint:
-    'Bengkel biasanya kasih stiker berisi tanggal servis dan servis berikutnya. Foto stikernya, lalu salin tanggalnya di bawah. Angka belum dibaca otomatis.',
+    'Bengkel biasanya kasih stiker berisi tanggal servis dan servis berikutnya. Foto stikernya, lalu salin tanggalnya di bawah.',
   takeTagPhoto: 'Foto stiker',
   pickTagPhoto: 'Pilih dari galeri',
   tagAttached: 'Stiker servis terlampir',
@@ -327,7 +330,7 @@ const id: typeof en = {
   restoreConfirmBody: 'Kembalikan “{name}” ke Home?',
   viewDetails: 'Lihat detail',
   archivedBanner: 'Aset ini diarsipkan. Pulihkan untuk mengubah atau mencatat servis lagi.',
-  clearInService: 'Batalkan Sedang Diservice',
+  clearInService: 'Sudah pulang dari bengkel',
   sampleLead: 'Mau mulai bagaimana?',
   sampleBody:
     'Data contoh berisi beberapa aset demo supaya kamu bisa coba aplikasi. Bisa diarsipkan atau dihapus nanti.',
@@ -366,6 +369,9 @@ const id: typeof en = {
   changeMethod: 'Pilih cara lain',
   addTagPhoto: 'Tambah foto stiker servis',
   addTagPhotoHint: 'Foto stiker bengkel, lalu salin tanggalnya di bawah.',
+  assetNotFound: 'Aset tidak ditemukan.',
+  archiveConfirmTitle: 'Arsipkan aset ini?',
+  archiveConfirmBody: 'Akan dipindahkan ke Arsip. Bisa dipulihkan nanti.',
 };
 
 export const dictionaries = { en, id };

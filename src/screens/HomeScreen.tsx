@@ -96,6 +96,9 @@ export function HomeScreen({ navigation }: Props) {
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
             <Text style={styles.emptyBody}>{t.emptyBody}</Text>
+            <View style={styles.emptyCta}>
+              <PrimaryButton label={t.addAsset} onPress={() => navigation.navigate('AddEditAsset')} />
+            </View>
           </View>
         }
         renderItem={({ item, index }) =>
@@ -160,6 +163,7 @@ const styles = StyleSheet.create({
   empty: { paddingTop: spacing.xl },
   emptyTitle: { fontSize: 18, color: colors.text },
   emptyBody: { marginTop: 8, fontSize: 15, color: colors.muted, lineHeight: 22 },
+  emptyCta: { marginTop: spacing.lg },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,

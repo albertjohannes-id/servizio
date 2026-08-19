@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { DEFAULT_INTERVALS, BRANDS_BY_TYPE } from '../data/seed';
@@ -191,8 +191,18 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
             label={t.delete}
             variant="danger"
             onPress={() => {
-              archiveAsset(existing.id);
-              navigation.navigate('Home');
+              const run = () => {
+                archiveAsset(existing.id);
+                navigation.navigate('Home');
+              };
+              if (Platform.OS === 'web') {
+                if (typeof window !== 'undefined' && window.confirm(t.archiveConfirmBody)) run();
+                return;
+              }
+              Alert.alert(t.archiveConfirmTitle, t.archiveConfirmBody, [
+                { text: t.cancel, style: 'cancel' },
+                { text: t.delete, style: 'destructive', onPress: run },
+              ]);
             }}
           />
         ) : null}

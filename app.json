@@ -30,7 +30,12 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "themeColor": "#F3F1EC",
+      "name": "Servizio",
+      "shortName": "Servizio",
+      "description": "Personal asset service tracker",
+      "backgroundColor": "#F3F1EC"
     },
     "plugins": [
       [

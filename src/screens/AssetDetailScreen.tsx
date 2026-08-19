@@ -81,6 +81,14 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     asset?.usageCurrent != null ? String(asset.usageCurrent) : ''
   );
   const [tab, setTab] = useState<HistoryTab>('service');
+  const [savedVisible, setSavedVisible] = useState(!!route.params.showSaved);
+
+  React.useEffect(() => {
+    if (savedVisible) {
+      const timer = setTimeout(() => setSavedVisible(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [savedVisible]);
 
   if (!asset) {
     return (
@@ -136,6 +144,11 @@ export function AssetDetailScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {savedVisible ? (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{t.saved}</Text>
+        </View>
+      ) : null}
       {asset.archived ? (
         <View style={styles.banner}>
           <Text style={styles.bannerText}>{t.archivedBanner}</Text>
@@ -278,6 +291,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  toast: {
+    marginTop: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#DFF5E6',
+    alignSelf: 'flex-start',
+  },
+  toastText: { fontSize: 14, fontWeight: '500', color: colors.ok },
   banner: {
     marginTop: spacing.sm,
     paddingVertical: 10,

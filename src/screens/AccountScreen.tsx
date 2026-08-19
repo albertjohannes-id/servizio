@@ -52,6 +52,7 @@ export function AccountScreen({ navigation }: Props) {
   const t = dictionaries[state.language];
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [devTaps, setDevTaps] = useState(0);
   const archivedCount = useMemo(
     () => state.assets.filter((a) => a.archived).length,
     [state.assets]
@@ -172,17 +173,21 @@ export function AccountScreen({ navigation }: Props) {
         <MenuRow title={t.lockApp} subtitle={t.lockAppHint} onPress={() => void lock()} danger />
       </View>
 
-      <View style={styles.misc}>
-        <PrimaryButton
-          label={t.debug}
-          variant="ghost"
-          style={styles.debugButton}
-          onPress={() => navigation.navigate('DebugMetrics')}
-        />
-      </View>
+      {devTaps >= 5 ? (
+        <View style={styles.misc}>
+          <PrimaryButton
+            label={t.debug}
+            variant="ghost"
+            style={styles.debugButton}
+            onPress={() => navigation.navigate('DebugMetrics')}
+          />
+        </View>
+      ) : null}
 
       <View style={styles.footer}>
-        <Text style={styles.version}>{t.appVersion.replace('{version}', '1.0.0')}</Text>
+        <Pressable onPress={() => setDevTaps((n) => n + 1)} hitSlop={8}>
+          <Text style={styles.version}>{t.appVersion.replace('{version}', '1.0.0')}</Text>
+        </Pressable>
         <Copyright />
       </View>
     </ScrollView>

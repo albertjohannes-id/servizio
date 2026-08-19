@@ -60,7 +60,8 @@ export function LogServiceScreen({ navigation, route }: Props) {
   if (!asset) {
     return (
       <View style={styles.center}>
-        <Text>Asset not found</Text>
+        <Text style={styles.notFound}>{t.assetNotFound}</Text>
+        <PrimaryButton label={t.back} variant="ghost" onPress={() => navigation.goBack()} />
       </View>
     );
   }
@@ -94,7 +95,7 @@ export function LogServiceScreen({ navigation, route }: Props) {
       nextServiceAt,
       usageNextDue: asset.usageEnabled ? parseNumber(usageNextDue) ?? asset.usageNextDue : asset.usageNextDue,
     });
-    navigation.navigate('AssetDetail', { assetId: asset.id });
+    navigation.navigate('AssetDetail', { assetId: asset.id, showSaved: true });
   };
 
   const attachTag = async (camera: boolean) => {
@@ -218,7 +219,8 @@ export function LogServiceScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, paddingTop: 8 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: spacing.lg },
+  notFound: { fontSize: 16, color: colors.muted },
   title: { fontSize: 24, fontWeight: '500', color: colors.text, letterSpacing: -0.3 },
   lead: { marginTop: 6, fontSize: 16, color: colors.muted },
   question: { marginTop: spacing.lg, marginBottom: spacing.sm, fontSize: 16, color: colors.text },

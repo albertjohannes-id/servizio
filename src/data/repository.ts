@@ -15,25 +15,41 @@ export const STORAGE_DRIVER = 'local' as const;
 
 const KEY = 'servizio_v1_state';
 
-export function emptyState(): AppState {
+export function blankState(language: AppState['language'] = 'en'): AppState {
+  return {
+    assets: [],
+    logs: [],
+    vendors: [...SEED_VENDORS],
+    events: [],
+    changes: [],
+    language,
+  };
+}
+
+export function sampleState(language: AppState['language'] = 'en'): AppState {
   return {
     assets: createSeedAssets(),
     logs: [],
     vendors: [...SEED_VENDORS],
     events: [],
     changes: [],
-    language: 'en',
+    language,
   };
+}
+
+/** Defaults used when merging loaded JSON. Fresh installs start blank (no sample assets). */
+export function emptyState(): AppState {
+  return blankState();
 }
 
 export async function loadState(): Promise<AppState> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    if (!raw) return emptyState();
+    if (!raw) return blankState();
     const parsed = JSON.parse(raw) as AppState;
-    if (!parsed.assets || !parsed.vendors) return emptyState();
+    if (!parsed.assets || !parsed.vendors) return blankState();
     return {
-      ...emptyState(),
+      ...blankState(),
       ...parsed,
       logs: (parsed.logs ?? []).map((log) => ({
         ...log,
@@ -50,7 +66,7 @@ export async function loadState(): Promise<AppState> {
       vendors: parsed.vendors.length ? parsed.vendors : [...SEED_VENDORS],
     };
   } catch {
-    return emptyState();
+    return blankState();
   }
 }
 

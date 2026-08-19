@@ -17,7 +17,7 @@ import {
   Vendor,
 } from '../domain/types';
 import { todayIso } from '../domain/status';
-import { clearState, emptyState, loadState, saveState } from './repository';
+import { blankState, clearState, emptyState, loadState, sampleState, saveState } from './repository';
 import { createSeedAssets, SEED_VENDORS } from './seed';
 
 type AssetInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'serviceOverride'> & {
@@ -35,6 +35,7 @@ interface AssetContextValue {
   permanentlyDeleteAsset: (id: string) => void;
   setCondition: (id: string, condition: ConditionStatus) => void;
   setInService: (id: string) => void;
+  clearInService: (id: string) => void;
   updateUsage: (id: string, usageCurrent: number) => void;
   logService: (input: {
     assetId: string;
@@ -51,6 +52,8 @@ interface AssetContextValue {
   addVendor: (name: string) => Vendor;
   track: (eventType: string, payload?: Record<string, unknown>) => void;
   resetDemo: () => void;
+  loadSampleData: () => void;
+  startEmpty: () => void;
   importState: (next: AppState) => Promise<void>;
   logsFor: (assetId: string) => ServiceLog[];
   changesFor: (assetId: string) => AssetChange[];
@@ -243,6 +246,19 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
         }));
         track('marked_in_service', { assetId: id });
       },
+      clearInService: (id) => {
+        const before = s.assets.find((a) => a.id === id);
+        if (!before || before.serviceOverride !== 'in_service') return;
+        const row = makeChange(id, 'in_service', 'in_service', null);
+        mutate((prev) => ({
+          ...prev,
+          changes: row ? [row, ...(prev.changes ?? [])] : prev.changes ?? [],
+          assets: prev.assets.map((a) =>
+            a.id === id ? { ...a, serviceOverride: null, updatedAt: todayIso() } : a
+          ),
+        }));
+        track('cleared_in_service', { assetId: id });
+      },
       updateUsage: (id, usageCurrent) => {
         const before = s.assets.find((a) => a.id === id);
         const row = before ? makeChange(id, 'km', before.usageCurrent, usageCurrent) : null;
@@ -310,15 +326,16 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
       },
       track,
       resetDemo: () => {
-        const next: AppState = {
-          assets: createSeedAssets(),
-          logs: [],
-          changes: [],
-          vendors: [...SEED_VENDORS],
-          events: [],
-          language: s.language,
-        };
+        const next = sampleState(s.language);
         void clearState().then(() => setState(next));
+      },
+      loadSampleData: () => {
+        setState(sampleState(s.language));
+        track('starter_sample');
+      },
+      startEmpty: () => {
+        setState(blankState(s.language));
+        track('starter_empty');
       },
       importState: async (next) => {
         const merged: AppState = {

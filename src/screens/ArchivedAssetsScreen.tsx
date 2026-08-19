@@ -19,13 +19,26 @@ import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ArchivedAssets'>;
 
-export function ArchivedAssetsScreen(_props: Props) {
+export function ArchivedAssetsScreen({ navigation }: Props) {
   const { state, restoreAsset, permanentlyDeleteAsset } = useAssets();
   const t = dictionaries[state.language];
   const archived = useMemo(
     () => state.assets.filter((a) => a.archived).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [state.assets]
   );
+
+  const confirmRestore = (id: string, name: string) => {
+    const body = t.restoreConfirmBody.replace('{name}', name);
+    const run = () => restoreAsset(id);
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(body)) run();
+      return;
+    }
+    Alert.alert(t.restoreConfirmTitle, body, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.restoreAsset, onPress: run },
+    ]);
+  };
 
   const confirmDelete = (id: string, name: string) => {
     const body = t.deleteForeverBody.replace('{name}', name);
@@ -59,29 +72,38 @@ export function ArchivedAssetsScreen(_props: Props) {
         const spec = brandModelLine(item);
         return (
           <View style={styles.row}>
-            <Image source={TYPE_IMAGES[item.type]} style={styles.thumb} resizeMode="contain" />
-            <View style={styles.body}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.meta}>
-                {spec ? `${spec} · ` : ''}
-                {t[item.type]}
-              </Text>
-              <View style={styles.actions}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => restoreAsset(item.id)}
-                  style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
-                >
-                  <Text style={styles.restore}>{t.restoreAsset}</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => confirmDelete(item.id, item.name)}
-                  style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
-                >
-                  <Text style={styles.delete}>{t.deleteForever}</Text>
-                </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={item.name}
+              onPress={() => navigation.navigate('AssetDetail', { assetId: item.id })}
+              style={({ pressed }) => [styles.main, pressed && styles.pressed]}
+            >
+              <Image source={TYPE_IMAGES[item.type]} style={styles.thumb} resizeMode="contain" />
+              <View style={styles.body}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.meta}>
+                  {spec ? `${spec} · ` : ''}
+                  {t[item.type]}
+                </Text>
+                <Text style={styles.viewHint}>{t.viewDetails}</Text>
               </View>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+            <View style={styles.actions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => confirmRestore(item.id, item.name)}
+                style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+              >
+                <Text style={styles.restore}>{t.restoreAsset}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => confirmDelete(item.id, item.name)}
+                style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+              >
+                <Text style={styles.delete}>{t.deleteForever}</Text>
+              </Pressable>
             </View>
           </View>
         );
@@ -98,17 +120,18 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, color: colors.text, fontWeight: '500' },
   emptyBody: { marginTop: 8, fontSize: 15, color: colors.muted, lineHeight: 22 },
   row: {
-    flexDirection: 'row',
-    gap: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
+  main: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   thumb: { width: 52, height: 52 },
   body: { flex: 1 },
   name: { fontSize: 17, fontWeight: '500', color: colors.text },
   meta: { marginTop: 3, fontSize: 13, color: colors.muted },
-  actions: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm },
+  viewHint: { marginTop: 4, fontSize: 12, color: colors.muted },
+  chevron: { fontSize: 22, color: colors.muted },
+  actions: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm, paddingLeft: 64 },
   actionBtn: { paddingVertical: 4 },
   pressed: { opacity: 0.55 },
   restore: { fontSize: 14, fontWeight: '500', color: colors.text, textDecorationLine: 'underline' },

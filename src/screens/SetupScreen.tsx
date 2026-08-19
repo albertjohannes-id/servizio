@@ -18,7 +18,7 @@ import { useAssets } from '../data/AssetContext';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { colors, spacing } from '../theme';
 
-type Step = 'email' | 'pin' | 'confirm';
+type Step = 'email' | 'pin' | 'confirm' | 'sample';
 
 function pinError(code: string | null, t: Dictionary): string | null {
   if (!code) return null;
@@ -29,13 +29,31 @@ function pinError(code: string | null, t: Dictionary): string | null {
 
 export function SetupScreen() {
   const { setupEmail, setSetupEmail, completeSetup } = useAuth();
-  const { state, setLanguage } = useAssets();
+  const { state, setLanguage, loadSampleData, startEmpty } = useAssets();
   const t = dictionaries[state.language];
   const [step, setStep] = useState<Step>('email');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(setupEmail.trim());
+
+  const finishSetup = useCallback(
+    async (withSample: boolean) => {
+      setBusy(true);
+      const code = await completeSetup(pin, pin);
+      if (code) {
+        setBusy(false);
+        setError(pinError(code, t));
+        setStep('pin');
+        setPin('');
+        return;
+      }
+      if (withSample) loadSampleData();
+      else startEmpty();
+      setBusy(false);
+    },
+    [completeSetup, loadSampleData, pin, startEmpty, t]
+  );
 
   const onPinEntered = useCallback(
     async (value: string) => {
@@ -45,16 +63,16 @@ export function SetupScreen() {
         setStep('confirm');
         return;
       }
-      setBusy(true);
-      const code = await completeSetup(pin, value);
-      setBusy(false);
-      if (code) {
-        setError(pinError(code, t));
+      if (value !== pin) {
+        setError(t.pinMismatch);
         setStep('pin');
         setPin('');
+        return;
       }
+      setPin(value);
+      setStep('sample');
     },
-    [completeSetup, pin, step, t]
+    [pin, step, t.pinMismatch]
   );
 
   useEffect(() => {
@@ -81,7 +99,7 @@ export function SetupScreen() {
             </View>
           </View>
           <Text style={styles.mark}>{t.appName}</Text>
-          <Text style={styles.lead}>{t.setupLead}</Text>
+          <Text style={styles.lead}>{step === 'sample' ? t.sampleLead : t.setupLead}</Text>
         </View>
 
         {step === 'email' ? (
@@ -104,6 +122,32 @@ export function SetupScreen() {
               />
             </View>
             <Text style={styles.hint}>{t.setupHint}</Text>
+            <Copyright />
+          </View>
+        ) : step === 'sample' ? (
+          <View style={styles.sampleBlock}>
+            <Text style={styles.sampleBody}>{t.sampleBody}</Text>
+            <PrimaryButton
+              label={t.startWithSample}
+              onPress={() => void finishSetup(true)}
+              loading={busy}
+              disabled={busy}
+            />
+            <PrimaryButton
+              label={t.startEmpty}
+              variant="ghost"
+              onPress={() => void finishSetup(false)}
+              disabled={busy}
+            />
+            <Pressable
+              onPress={() => {
+                setStep('confirm');
+                setError(null);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.back}>{t.back}</Text>
+            </Pressable>
             <Copyright />
           </View>
         ) : (
@@ -151,7 +195,9 @@ const styles = StyleSheet.create({
   lead: { marginTop: 10, fontSize: 17, color: colors.muted, lineHeight: 24, maxWidth: 320 },
   form: { gap: 4 },
   pinBlock: { alignItems: 'center', gap: spacing.md },
+  sampleBlock: { gap: spacing.md },
+  sampleBody: { fontSize: 15, color: colors.muted, lineHeight: 22 },
   cta: { marginTop: spacing.md },
   hint: { marginTop: spacing.sm, fontSize: 12, color: colors.muted, lineHeight: 18 },
-  back: { fontSize: 14, color: colors.muted, textDecorationLine: 'underline' },
+  back: { fontSize: 14, color: colors.muted, textDecorationLine: 'underline', textAlign: 'center' },
 });

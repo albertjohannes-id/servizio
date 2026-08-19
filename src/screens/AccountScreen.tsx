@@ -131,7 +131,6 @@ export function AccountScreen({ navigation }: Props) {
       </View>
 
       <Text style={styles.sectionLabel}>{t.backupSection}</Text>
-      <Text style={styles.sectionHint}>{t.backupHint}</Text>
       <View style={styles.group}>
         <MenuRow
           title={t.exportBackup}
@@ -182,6 +181,7 @@ export function AccountScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.footer}>
+        <Text style={styles.version}>{t.appVersion.replace('{version}', '1.0.0')}</Text>
         <Copyright />
       </View>
     </ScrollView>
@@ -214,7 +214,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  sectionHint: { marginTop: -2, marginBottom: spacing.sm, fontSize: 13, color: colors.muted, lineHeight: 18 },
   group: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -250,5 +249,6 @@ const styles = StyleSheet.create({
   langChipText: { fontSize: 13, color: colors.muted, fontWeight: '500' },
   langChipTextOn: { color: colors.primaryText },
   misc: { marginTop: spacing.lg, alignItems: 'flex-start' },
-  footer: { marginTop: spacing.xl },
+  footer: { marginTop: spacing.xl, gap: 8 },
+  version: { fontSize: 12, color: colors.muted },
 });

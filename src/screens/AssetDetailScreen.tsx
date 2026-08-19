@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -45,7 +46,10 @@ function formatChangeValue(
   t: Dictionary,
   lang: 'en' | 'id'
 ): string {
-  if (value == null || value === '') return t.valueEmpty;
+  if (value == null || value === '') {
+    if (field === 'in_service') return t.on_schedule;
+    return t.valueEmpty;
+  }
   if (field === 'km' || field === 'usageNextDue' || field === 'usageInterval') {
     const n = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(n) ? formatKm(n, lang) : String(value);
@@ -60,9 +64,19 @@ function formatChangeValue(
 }
 
 export function AssetDetailScreen({ navigation, route }: Props) {
-  const { state, setCondition, setInService, updateUsage, logsFor, changesFor } = useAssets();
+  const {
+    state,
+    setCondition,
+    setInService,
+    clearInService,
+    updateUsage,
+    restoreAsset,
+    permanentlyDeleteAsset,
+    logsFor,
+    changesFor,
+  } = useAssets();
   const t = dictionaries[state.language];
-  const asset = state.assets.find((a) => a.id === route.params.assetId && !a.archived);
+  const asset = state.assets.find((a) => a.id === route.params.assetId);
   const [kmDraft, setKmDraft] = useState(
     asset?.usageCurrent != null ? String(asset.usageCurrent) : ''
   );
@@ -72,7 +86,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     return (
       <View style={styles.center}>
         <Text>{t.cancel}</Text>
-        <PrimaryButton label={t.cancel} variant="ghost" onPress={() => navigation.navigate('Home')} />
+        <PrimaryButton label={t.cancel} variant="ghost" onPress={() => navigation.goBack()} />
       </View>
     );
   }
@@ -88,8 +102,46 @@ export function AssetDetailScreen({ navigation, route }: Props) {
         ? t.dueInDays.replace('{n}', formatInt(Math.max(days, 0), state.language))
         : formatDate(asset.nextServiceAt);
 
+  const confirmRestore = () => {
+    const body = t.restoreConfirmBody.replace('{name}', asset.name);
+    const run = () => {
+      restoreAsset(asset.id);
+      navigation.navigate('Home');
+    };
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(body)) run();
+      return;
+    }
+    Alert.alert(t.restoreConfirmTitle, body, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.restoreAsset, onPress: run },
+    ]);
+  };
+
+  const confirmDelete = () => {
+    const body = t.deleteForeverBody.replace('{name}', asset.name);
+    const run = () => {
+      permanentlyDeleteAsset(asset.id);
+      navigation.navigate('ArchivedAssets');
+    };
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(body)) run();
+      return;
+    }
+    Alert.alert(t.deleteForeverTitle, body, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.deleteForever, style: 'destructive', onPress: run },
+    ]);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {asset.archived ? (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>{t.archivedBanner}</Text>
+        </View>
+      ) : null}
+
       <View style={styles.hero}>
         <Image source={TYPE_IMAGES[asset.type]} style={styles.heroImage} resizeMode="contain" />
         <View style={styles.heroCopy}>
@@ -103,48 +155,67 @@ export function AssetDetailScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      <Text style={styles.label}>{t.condition}</Text>
-      <ConditionPicker value={asset.condition} onChange={(next) => setCondition(asset.id, next)} t={t} />
+      {asset.archived ? (
+        <View style={styles.actions}>
+          <PrimaryButton label={t.restoreAsset} onPress={confirmRestore} />
+          <PrimaryButton label={t.deleteForever} variant="danger" onPress={confirmDelete} />
+        </View>
+      ) : (
+        <>
+          <Text style={styles.label}>{t.condition}</Text>
+          <ConditionPicker value={asset.condition} onChange={(next) => setCondition(asset.id, next)} t={t} />
 
-      {asset.usageEnabled ? (
-        <View style={styles.block}>
-          <Text style={styles.label}>{t.currentKm}</Text>
-          <View style={styles.kmRow}>
-            <View style={styles.kmField}>
-              <NumberField lang={state.language} value={kmDraft} onChangeDigits={setKmDraft} />
+          {asset.usageEnabled ? (
+            <View style={styles.block}>
+              <Text style={styles.label}>{t.currentKm}</Text>
+              <View style={styles.kmRow}>
+                <View style={styles.kmField}>
+                  <NumberField lang={state.language} value={kmDraft} onChangeDigits={setKmDraft} />
+                </View>
+                <PrimaryButton
+                  label={t.updateKm}
+                  variant="ghost"
+                  onPress={() => {
+                    const n = parseNumber(kmDraft);
+                    if (n == null) {
+                      Alert.alert('Invalid km');
+                      return;
+                    }
+                    if (asset.usageCurrent === n) return;
+                    updateUsage(asset.id, n);
+                    setTab('changes');
+                  }}
+                />
+              </View>
             </View>
+          ) : null}
+
+          <View style={styles.actions}>
+            {service === 'in_service' ? (
+              <PrimaryButton
+                label={t.clearInService}
+                variant="ghost"
+                onPress={() => clearInService(asset.id)}
+              />
+            ) : (
+              <PrimaryButton
+                label={t.markInService}
+                variant="ghost"
+                onPress={() => setInService(asset.id)}
+              />
+            )}
             <PrimaryButton
-              label={t.updateKm}
+              label={t.logServiceNow}
+              onPress={() => navigation.navigate('LogService', { assetId: asset.id })}
+            />
+            <PrimaryButton
+              label={t.edit}
               variant="ghost"
-              onPress={() => {
-                const n = parseNumber(kmDraft);
-                if (n == null) {
-                  Alert.alert('Invalid km');
-                  return;
-                }
-                if (asset.usageCurrent === n) return;
-                updateUsage(asset.id, n);
-                setTab('changes');
-              }}
+              onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })}
             />
           </View>
-        </View>
-      ) : null}
-
-      <View style={styles.actions}>
-        {service !== 'in_service' ? (
-          <PrimaryButton label={t.markInService} variant="ghost" onPress={() => setInService(asset.id)} />
-        ) : null}
-        <PrimaryButton
-          label={t.logServiceNow}
-          onPress={() => navigation.navigate('LogService', { assetId: asset.id })}
-        />
-        <PrimaryButton
-          label={t.edit}
-          variant="ghost"
-          onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })}
-        />
-      </View>
+        </>
+      )}
 
       <View style={styles.tabs}>
         <Pressable
@@ -207,6 +278,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  banner: {
+    marginTop: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#E8E6E0',
+  },
+  bannerText: { fontSize: 13, color: colors.muted, lineHeight: 18 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
   heroImage: { width: 88, height: 88 },
   heroCopy: { flex: 1 },

@@ -19,7 +19,8 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - One Expo SDK 57 TypeScript app: iOS, Android, **web**.
 - React Navigation native-stack (not Expo Router).
 - `app.json` → `web.output: "single"` for Cloudflare Pages. Not Next.js, not a PWA rewrite.
-- MVP data: **no remote DB**. `src/data/repository.ts` → AsyncStorage / localStorage, key `servizio_v1_state`. One JSON object (`assets`, `vendors`, `logs`, `changes`, `events`). Do not split into multiple storage keys unless asked.
+- MVP data: **no remote DB**. `src/data/repository.ts` → AsyncStorage / localStorage, key `servizio_v1_state`. One JSON object (`assets`, `vendors`, `logs`, `changes`, `events`). Fresh setup offers sample data or empty start. Do not split into multiple storage keys unless asked.
+- Dual status: **Condition** (Working / Needs Attention / Not Working — how the asset feels, manual) is separate from **Service** schedule (On Schedule / Due Soon / Overdue) and optional **In Service** override (at the shop). Clear In Service returns to computed schedule; logging a service also clears it.
 - Supabase sync = later; swap the repository module only.
 
 ## UI

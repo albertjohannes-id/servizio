@@ -104,7 +104,6 @@ export function UnlockScreen() {
 
         <PinPad
           title={t.enterPin}
-          subtitle={t.enterPinHint}
           error={error || attemptsLeft(failedAttempts, t)}
           disabled={busy || canResetAfterLockout}
           onChange={() => setError(null)}

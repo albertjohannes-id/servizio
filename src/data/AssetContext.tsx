@@ -31,6 +31,8 @@ interface AssetContextValue {
   setLanguage: (lang: 'en' | 'id') => void;
   upsertAsset: (input: AssetInput) => string;
   archiveAsset: (id: string) => void;
+  restoreAsset: (id: string) => void;
+  permanentlyDeleteAsset: (id: string) => void;
   setCondition: (id: string, condition: ConditionStatus) => void;
   setInService: (id: string) => void;
   updateUsage: (id: string, usageCurrent: number) => void;
@@ -194,6 +196,24 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
           ),
         }));
         track('asset_archived', { assetId: id });
+      },
+      restoreAsset: (id) => {
+        mutate((prev) => ({
+          ...prev,
+          assets: prev.assets.map((a) =>
+            a.id === id ? { ...a, archived: false, updatedAt: todayIso() } : a
+          ),
+        }));
+        track('asset_restored', { assetId: id });
+      },
+      permanentlyDeleteAsset: (id) => {
+        mutate((prev) => ({
+          ...prev,
+          assets: prev.assets.filter((a) => a.id !== id),
+          logs: prev.logs.filter((l) => l.assetId !== id),
+          changes: (prev.changes ?? []).filter((c) => c.assetId !== id),
+        }));
+        track('asset_deleted', { assetId: id });
       },
       setCondition: (id, condition) => {
         const before = s.assets.find((a) => a.id === id);

@@ -3,6 +3,7 @@ export type RootStackParamList = {
   Unlock: undefined;
   Home: undefined;
   Account: undefined;
+  ArchivedAssets: undefined;
   AddEditAsset: { assetId?: string } | undefined;
   AssetDetail: { assetId: string };
   LogService: { assetId: string; fromTag?: boolean };

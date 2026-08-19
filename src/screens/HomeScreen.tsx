@@ -91,7 +91,7 @@ export function HomeScreen({ navigation }: Props) {
       <FlatList
         data={items}
         keyExtractor={(item) => item.key}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 100 + insets.bottom }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 130 + insets.bottom }}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
@@ -119,10 +119,22 @@ export function HomeScreen({ navigation }: Props) {
 
       <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>
         <PrimaryButton label={t.addAsset} onPress={() => navigation.navigate('AddEditAsset')} />
-        <Pressable onPress={() => navigation.navigate('Account')} style={styles.account}>
-          <Text style={styles.accountText} numberOfLines={1}>
-            {email}
-          </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.account}
+          onPress={() => navigation.navigate('Account')}
+          style={({ pressed }) => [styles.profileRow, pressed && styles.profilePressed]}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarLetter}>{(email?.[0] ?? 'S').toUpperCase()}</Text>
+          </View>
+          <View style={styles.profileText}>
+            <Text style={styles.profileLabel}>{t.account}</Text>
+            <Text style={styles.profileEmail} numberOfLines={1}>
+              {email}
+            </Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
         </Pressable>
         <Copyright />
       </View>
@@ -154,8 +166,33 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
     backgroundColor: colors.bg,
-    gap: 8,
+    gap: 10,
   },
-  account: { alignItems: 'center', paddingVertical: 6 },
-  accountText: { fontSize: 12, color: colors.muted },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  profilePressed: { opacity: 0.7, backgroundColor: '#F0EBE3' },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: { fontSize: 14, fontWeight: '600', color: colors.text },
+  profileText: { flex: 1 },
+  profileLabel: { fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  profileEmail: { marginTop: 2, fontSize: 14, color: colors.text, fontWeight: '500' },
+  chevron: { fontSize: 22, color: colors.muted, lineHeight: 24 },
 });

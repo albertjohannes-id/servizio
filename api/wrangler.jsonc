@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "servizio-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "servizio",
+      "database_id": "ffd57afe-70ad-4f73-8792-e1eae1793afd",
+      "preview_database_id": "ffd57afe-70ad-4f73-8792-e1eae1793afd"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "servizio-photos"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://127.0.0.1:19006,https://servizio.albertjohannes-id.workers.dev",
+    "ALLOW_OTP_IN_RESPONSE": "false",
+    "RESEND_FROM": "Servizio <noreply@inovateks.id>"
+  }
+}

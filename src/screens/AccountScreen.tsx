@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -12,13 +12,17 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../data/AuthContext';
 import { useAssets } from '../data/AssetContext';
 import { backupSummary, exportBackupFile, parseBackup, pickBackupFile } from '../data/backup';
+import { syncStatusLabel } from '../data/syncStatusLabel';
 import { dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Copyright } from '../components/Copyright';
+import { TextField } from '../components/TextField';
 import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Account'>;
+
+const OTP_RESEND_COOLDOWN_SEC = 45;
 
 function MenuRow({
   title,
@@ -47,15 +51,53 @@ function MenuRow({
 }
 
 export function AccountScreen({ navigation }: Props) {
-  const { email, lock } = useAuth();
-  const { state, importState, setLanguage, setHomeColumns } = useAssets();
+  const {
+    email,
+    lock,
+    emailVerified,
+    cloudLinked,
+    startEmailVerification,
+    confirmEmailVerification,
+  } = useAuth();
+  const {
+    state,
+    importState,
+    setLanguage,
+    setHomeColumns,
+    syncStatus,
+    syncMeta,
+    lastSyncError,
+    syncConflict,
+    syncNow,
+    resolveSyncKeepLocal,
+    resolveSyncUseCloud,
+  } = useAssets();
   const t = dictionaries[state.language];
-  const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const [busy, setBusy] = useState<'export' | 'import' | 'verify' | 'sync' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [devTaps, setDevTaps] = useState(0);
+  const [verifyStep, setVerifyStep] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [devOtp, setDevOtp] = useState<string | undefined>();
+  const [resendIn, setResendIn] = useState(0);
   const archivedCount = useMemo(
     () => state.assets.filter((a) => a.archived).length,
     [state.assets]
+  );
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setTimeout(() => setResendIn((n) => Math.max(0, n - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [resendIn]);
+
+  const syncSubtitle = useMemo(
+    () =>
+      syncStatusLabel(syncStatus, syncMeta, t, {
+        linked: cloudLinked,
+        lastError: lastSyncError,
+      }),
+    [cloudLinked, lastSyncError, syncMeta, syncStatus, t]
   );
 
   const onExport = async () => {
@@ -106,6 +148,70 @@ export function AccountScreen({ navigation }: Props) {
     }
   };
 
+  const onStartVerify = async () => {
+    setBusy('verify');
+    setMessage(null);
+    const result = await startEmailVerification();
+    setBusy(null);
+    if (!result.ok) {
+      setMessage(
+        result.error === 'network_error'
+          ? t.networkError
+          : result.error === 'rate_limited'
+            ? t.otpRateLimited
+            : t.otpFailed
+      );
+      return;
+    }
+    setDevOtp(result.devOtp);
+    setResendIn(OTP_RESEND_COOLDOWN_SEC);
+    setVerifyStep(true);
+  };
+
+  const onResendVerify = async () => {
+    if (busy || resendIn > 0) return;
+    setBusy('verify');
+    setMessage(null);
+    const result = await startEmailVerification();
+    setBusy(null);
+    if (!result.ok) {
+      setMessage(
+        result.error === 'rate_limited' ? t.otpRateLimited : t.otpFailed
+      );
+      return;
+    }
+    setDevOtp(result.devOtp);
+    setOtp('');
+    setResendIn(OTP_RESEND_COOLDOWN_SEC);
+    setMessage(t.otpResent);
+  };
+
+  const onConfirmVerify = async () => {
+    if (!/^\d{6}$/.test(otp.trim())) return;
+    setBusy('verify');
+    setMessage(null);
+    const result = await confirmEmailVerification(otp.trim());
+    setBusy(null);
+    if (!result.ok) {
+      setMessage(
+        result.error === 'otp_invalid'
+          ? t.otpInvalid
+          : result.error === 'otp_expired'
+            ? t.otpExpired
+            : t.otpFailed
+      );
+      return;
+    }
+    setVerifyStep(false);
+    setOtp('');
+    setDevOtp(undefined);
+    setResendIn(0);
+    setMessage(t.emailVerified);
+    setBusy('sync');
+    await syncNow();
+    setBusy(null);
+  };
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.profile}>
@@ -114,8 +220,107 @@ export function AccountScreen({ navigation }: Props) {
         </View>
         <View style={styles.profileText}>
           <Text style={styles.email}>{email}</Text>
-          <Text style={styles.hint}>{t.accountHint}</Text>
+          <Text style={styles.hint}>
+            {emailVerified ? t.emailVerified : t.emailUnverified}. {t.accountHint}
+          </Text>
         </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>{t.cloudSection}</Text>
+      <View style={styles.group}>
+        {!emailVerified ? (
+          verifyStep ? (
+            <View style={styles.verifyBox}>
+              <TextField
+                label={t.otpCode}
+                required
+                value={otp}
+                onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                placeholder="123456"
+              />
+              <Text style={styles.menuSub}>{t.otpExpiresHint}</Text>
+              {devOtp ? (
+                <Text style={styles.menuSub}>{t.devOtpHint.replace('{code}', devOtp)}</Text>
+              ) : null}
+              <PrimaryButton
+                label={t.verifyOtp}
+                onPress={() => void onConfirmVerify()}
+                loading={busy === 'verify'}
+                disabled={busy === 'verify' || otp.trim().length !== 6}
+              />
+              <Pressable
+                onPress={() => void onResendVerify()}
+                disabled={busy === 'verify' || resendIn > 0}
+                hitSlop={8}
+              >
+                <Text
+                  style={[
+                    styles.cancelLink,
+                    (busy === 'verify' || resendIn > 0) && styles.linkDisabled,
+                  ]}
+                >
+                  {resendIn > 0
+                    ? t.resendOtpIn.replace('{n}', String(resendIn))
+                    : t.resendOtp}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setVerifyStep(false);
+                  setOtp('');
+                  setResendIn(0);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.cancelLink}>{t.cancel}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <MenuRow
+              title={t.verifyEmail}
+              subtitle={t.verifyEmailHint}
+              onPress={() => {
+                if (busy) return;
+                void onStartVerify();
+              }}
+            />
+          )
+        ) : (
+          <>
+            <MenuRow
+              title={t.syncNow}
+              subtitle={syncSubtitle}
+              onPress={() => {
+                if (busy) return;
+                setBusy('sync');
+                void syncNow().finally(() => setBusy(null));
+              }}
+            />
+            {syncConflict ? (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.verifyBox}>
+                  <Text style={styles.menuTitle}>{t.syncConflictTitle}</Text>
+                  <Text style={styles.menuSub}>
+                    {syncConflict.server ? t.syncConflictBody : t.syncConflictNoCloud}
+                  </Text>
+                  {syncConflict.server ? (
+                    <PrimaryButton
+                      label={t.useCloudData}
+                      onPress={() => void resolveSyncUseCloud()}
+                    />
+                  ) : null}
+                  <PrimaryButton
+                    label={t.keepLocalData}
+                    variant={syncConflict.server ? 'ghost' : 'primary'}
+                    onPress={() => void resolveSyncKeepLocal()}
+                  />
+                </View>
+              </>
+            ) : null}
+          </>
+        )}
       </View>
 
       <Text style={styles.sectionLabel}>{t.assetsSection}</Text>
@@ -275,4 +480,7 @@ const styles = StyleSheet.create({
   debugButton: { paddingHorizontal: 0, minHeight: 36 },
   footer: { marginTop: spacing.xl, gap: 8 },
   version: { fontSize: 12, color: colors.muted },
+  verifyBox: { padding: spacing.md, gap: spacing.sm },
+  cancelLink: { fontSize: 14, color: colors.muted, textDecorationLine: 'underline' },
+  linkDisabled: { opacity: 0.45, textDecorationLine: 'none' },
 });

@@ -36,6 +36,24 @@ Do not put `wrangler deploy` in the **build** command. Expo only writes `dist/`;
 
 Host at site root. Subpaths need extra `baseUrl` work — skip for MVP.
 
+The **sync API** is a separate Worker (`api/wrangler.jsonc`, name `servizio-api`). Deploy it independently. **Bake** `EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev` into the web export — env is compile-time for Expo, not a runtime Workers binding on the static site.
+
+Do not put `RESEND_API_KEY` on the static `servizio` Worker; it belongs on **`servizio-api`**.
+
+**Photos (1.2):** R2 bucket `servizio-photos` is bound on `servizio-api` as `PHOTOS`. `/health` reports `photos: true`. No public R2 URLs — the app loads images via authenticated `GET /media`.
+
+**Live:** https://servizio.albertjohannes-id.workers.dev → API https://servizio-api.albertjohannes-id.workers.dev
+
+Manual deploy from repo root of the app:
+
+```bash
+EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev npm run export:web
+npx wrangler deploy
+# API (when Worker/R2/D1 changes):
+cd api && npm run deploy
+```
+
+
 ## Local production preview
 
 ```bash

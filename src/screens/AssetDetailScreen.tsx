@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
+import { pickImage } from '../data/pickImage';
 import { brandModelLine, formatInt, formatKm, yearLine } from '../domain/format';
 import { TYPE_IMAGES } from '../data/typeImages';
+import { DEFAULT_INTERVALS } from '../data/seed';
 import { formatDate, formatDateTime, isScheduleTracked, maintenanceSummary, resolveServiceStatus } from '../domain/status';
-import { AssetChange, ChangeField, ServiceLog } from '../domain/types';
+import { AssetChange, ChangeField } from '../domain/types';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TappablePhoto } from '../components/TappablePhoto';
@@ -82,6 +84,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     setLocation,
     restoreAsset,
     permanentlyDeleteAsset,
+    updateLogPhotos,
     logsFor,
     changesFor,
   } = useAssets();
@@ -89,7 +92,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   const asset = state.assets.find((a) => a.id === route.params.assetId);
   const [tab, setTab] = useState<HistoryTab>('service');
   const [savedVisible, setSavedVisible] = useState(!!route.params.showSaved);
-  const [openLog, setOpenLog] = useState<ServiceLog | null>(null);
+  const [openLogId, setOpenLogId] = useState<string | null>(null);
   const [openChange, setOpenChange] = useState<AssetChange | null>(null);
 
   React.useEffect(() => {
@@ -111,9 +114,11 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   const service = resolveServiceStatus(asset);
   const logs = logsFor(asset.id);
   const changes = changesFor(asset.id);
+  const openLog = openLogId ? logs.find((l) => l.id === openLogId) ?? null : null;
   const maint = maintenanceSummary(asset, t, state.language);
   const dueNote = maint.primary;
   const untracked = !isScheduleTracked(asset);
+  const canEditPhotos = !asset.archived;
 
   const confirmRestore = () => {
     const body = t.restoreConfirmBody.replace('{name}', asset.name);
@@ -167,8 +172,15 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           <Text style={styles.title}>{asset.name}</Text>
           {brandModelLine(asset) ? <Text style={styles.spec}>{brandModelLine(asset)}</Text> : null}
           {yearLine(asset) ? <Text style={styles.spec}>{yearLine(asset)}</Text> : null}
-          {asset.usageEnabled && asset.usageCurrent != null ? (
-            <Text style={styles.spec}>{formatKm(asset.usageCurrent, state.language)}</Text>
+          {asset.usageCurrent != null ? (
+            <View style={styles.kmRow} accessibilityLabel={`${t.currentKm} ${formatKm(asset.usageCurrent, state.language)}`}>
+              <Image
+                source={require('../../assets/icons/odometer.png')}
+                style={styles.kmIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.kmValue}>{formatKm(asset.usageCurrent, state.language)}</Text>
+            </View>
           ) : null}
           <Text style={styles.due}>
             {untracked
@@ -207,7 +219,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
               label={t.logServiceNow}
               onPress={() => navigation.navigate('LogService', { assetId: asset.id })}
             />
-            {asset.usageEnabled ? (
+            {DEFAULT_INTERVALS[asset.type]?.km != null ? (
               <PrimaryButton
                 label={t.logKm}
                 variant="ghost"
@@ -249,7 +261,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           logs.map((log) => (
             <Pressable
               key={log.id}
-              onPress={() => setOpenLog(log)}
+              onPress={() => setOpenLogId(log.id)}
               accessibilityRole="button"
               accessibilityLabel={`${t.tabService} ${formatDate(log.servicedAt)}`}
               style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -310,14 +322,14 @@ export function AssetDetailScreen({ navigation, route }: Props) {
         transparent
         animationType="fade"
         onRequestClose={() => {
-          setOpenLog(null);
+          setOpenLogId(null);
           setOpenChange(null);
         }}
       >
         <Pressable
           style={styles.backdrop}
           onPress={() => {
-            setOpenLog(null);
+            setOpenLogId(null);
             setOpenChange(null);
           }}
         >
@@ -339,22 +351,68 @@ export function AssetDetailScreen({ navigation, route }: Props) {
                   <DetailRow label={t.notes} value={openLog.notes?.trim() ? openLog.notes : t.noNotes} />
                   <DetailRow label={t.loggedAt} value={formatDateTime(openLog.createdAt)} />
                 </View>
-                {openLog.receiptUri ? (
-                  <View style={styles.photoBlock}>
-                    <Text style={styles.detailLabel}>{t.receipt}</Text>
-                    <TappablePhoto uri={openLog.receiptUri} style={styles.sheetPhoto} accessibilityLabel={t.receipt} />
-                  </View>
-                ) : null}
-                {openLog.serviceTagUri ? (
-                  <View style={styles.photoBlock}>
-                    <Text style={styles.detailLabel}>{t.serviceTag}</Text>
-                    <TappablePhoto uri={openLog.serviceTagUri} style={styles.sheetPhoto} accessibilityLabel={t.serviceTag} />
-                  </View>
-                ) : null}
+                <View style={styles.photoBlock}>
+                  <Text style={styles.detailLabel}>{t.receipt}</Text>
+                  {openLog.receiptUri ? (
+                    <TappablePhoto
+                      uri={openLog.receiptUri}
+                      style={styles.sheetPhoto}
+                      accessibilityLabel={t.receipt}
+                    />
+                  ) : null}
+                  {canEditPhotos ? (
+                    <View style={styles.photoActions}>
+                      <PrimaryButton
+                        label={openLog.receiptUri ? t.changeReceipt : t.receipt}
+                        variant="ghost"
+                        onPress={async () => {
+                          const uri = await pickImage(false);
+                          if (uri) updateLogPhotos(openLog.id, { receiptUri: uri });
+                        }}
+                      />
+                      {openLog.receiptUri ? (
+                        <PrimaryButton
+                          label={t.removeReceipt}
+                          variant="ghost"
+                          onPress={() => updateLogPhotos(openLog.id, { receiptUri: null })}
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.photoBlock}>
+                  <Text style={styles.detailLabel}>{t.serviceTag}</Text>
+                  {openLog.serviceTagUri ? (
+                    <TappablePhoto
+                      uri={openLog.serviceTagUri}
+                      style={styles.sheetPhoto}
+                      accessibilityLabel={t.serviceTag}
+                    />
+                  ) : null}
+                  {canEditPhotos ? (
+                    <View style={styles.photoActions}>
+                      <PrimaryButton
+                        label={openLog.serviceTagUri ? t.changeServiceTag : t.serviceTag}
+                        variant="ghost"
+                        onPress={async () => {
+                          const uri = await pickImage(Platform.OS !== 'web');
+                          if (uri) updateLogPhotos(openLog.id, { serviceTagUri: uri });
+                        }}
+                      />
+                      {openLog.serviceTagUri ? (
+                        <PrimaryButton
+                          label={t.removeServiceTag}
+                          variant="ghost"
+                          onPress={() => updateLogPhotos(openLog.id, { serviceTagUri: null })}
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
                 <PrimaryButton
                   label={t.done}
                   onPress={() => {
-                    setOpenLog(null);
+                    setOpenLogId(null);
                     setOpenChange(null);
                   }}
                 />
@@ -377,7 +435,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
                 <PrimaryButton
                   label={t.done}
                   onPress={() => {
-                    setOpenLog(null);
+                    setOpenLogId(null);
                     setOpenChange(null);
                   }}
                 />
@@ -438,6 +496,9 @@ const styles = StyleSheet.create({
   kicker: { fontSize: 13, color: colors.muted },
   title: { fontSize: 26, fontWeight: '500', color: colors.text, letterSpacing: -0.4, marginTop: 2 },
   spec: { marginTop: 4, fontSize: 15, color: colors.text },
+  kmRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kmIcon: { width: 18, height: 18, backgroundColor: 'transparent' },
+  kmValue: { fontSize: 15, fontWeight: '600', color: colors.text },
   due: { marginTop: 6, fontSize: 15, color: colors.muted },
   label: {
     marginTop: spacing.lg,
@@ -540,6 +601,7 @@ const styles = StyleSheet.create({
   },
   detailValue: { fontSize: 16, color: colors.text, lineHeight: 22 },
   photoBlock: { gap: 6 },
+  photoActions: { gap: 6 },
   sheetPhoto: { width: '100%', height: 160, borderRadius: 8, backgroundColor: colors.border },
   fromTo: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   fromToCol: { flex: 1, gap: 2 },

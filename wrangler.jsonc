@@ -1,9 +1,17 @@
 {
-  "$schema": "https://unpkg.com/wrangler@4.34.0/config-schema.json",
-  "name": "servizio",
-  "compatibility_date": "2026-08-18",
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+	"$schema": "https://unpkg.com/wrangler@4.34.0/config-schema.json",
+	"name": "servizio",
+	"compatibility_date": "2026-08-18",
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application"
+	},
+	"d1_databases": [
+		{
+			"binding": "servizio",
+			"database_name": "servizio",
+			"database_id": "ffd57afe-70ad-4f73-8792-e1eae1793afd",
+			"remote": true
+		}
+	]
 }

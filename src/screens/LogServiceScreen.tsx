@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { pickImage } from '../data/pickImage';
@@ -41,6 +41,7 @@ export function LogServiceScreen({ navigation, route }: Props) {
   const [notes, setNotes] = useState('');
   const [cost, setCost] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [serviceTagUri, setServiceTagUri] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [newVendor, setNewVendor] = useState('');
 
@@ -149,7 +150,7 @@ export function LogServiceScreen({ navigation, route }: Props) {
       notes: notes.trim(),
       cost: parseNumber(cost),
       receiptUri,
-      serviceTagUri: null,
+      serviceTagUri,
       vendorId: vid,
       vendorName: vname,
       nextServiceAt: showScheduleFields && tracksDate ? nextServiceAt : undefined,
@@ -251,6 +252,25 @@ export function LogServiceScreen({ navigation, route }: Props) {
         />
         {receiptUri ? (
           <TappablePhoto uri={receiptUri} style={styles.receipt} accessibilityLabel={t.receipt} />
+        ) : null}
+      </View>
+
+      <View style={styles.block}>
+        <Text style={styles.setupHint}>{t.serviceTagHint}</Text>
+        <PrimaryButton
+          label={serviceTagUri ? t.tagAttached : t.serviceTag}
+          variant="ghost"
+          onPress={async () => {
+            const uri = await pickImage(Platform.OS !== 'web');
+            if (uri) setServiceTagUri(uri);
+          }}
+        />
+        {serviceTagUri ? (
+          <TappablePhoto
+            uri={serviceTagUri}
+            style={styles.receipt}
+            accessibilityLabel={t.serviceTag}
+          />
         ) : null}
       </View>
 

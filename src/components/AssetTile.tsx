@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TYPE_IMAGES } from '../data/typeImages';
-import { Asset, ServiceStatus } from '../domain/types';
+import { Asset, ConditionStatus, ServiceStatus } from '../domain/types';
 import { isScheduleTracked, maintenanceTileDisplay, resolveServiceStatus } from '../domain/status';
 import { Dictionary, Lang } from '../i18n/strings';
 import { colors } from '../theme';
@@ -11,6 +11,12 @@ function tileFill(asset: Asset, status: ServiceStatus): string {
   if (status === 'overdue') return colors.tileOverdue;
   if (status === 'due_soon') return colors.tileDueSoon;
   return colors.tileOnTrack;
+}
+
+function conditionColor(condition: ConditionStatus): string {
+  if (condition === 'needs_attention') return colors.warn;
+  if (condition === 'not_working') return colors.danger;
+  return colors.ok;
 }
 
 export function AssetTile({
@@ -32,12 +38,13 @@ export function AssetTile({
   const displayLines = maintenanceTileDisplay(asset, t, lang, !!compact);
   const icon = compact ? 28 : 64;
   const pad = compact ? 8 : 12;
+  const atShop = asset.location === 'service_center';
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${asset.name}. ${displayLines.join('. ')}`}
+      accessibilityLabel={`${asset.name}. ${t[asset.condition]}. ${displayLines.join('. ')}`}
       style={({ pressed }) => [
         styles.tile,
         {
@@ -50,24 +57,34 @@ export function AssetTile({
       ]}
     >
       <View style={styles.top}>
-        <Image
-          source={TYPE_IMAGES[asset.type]}
-          style={{ width: icon, height: icon }}
-          resizeMode="contain"
+        <View style={styles.media}>
+          <Image
+            source={TYPE_IMAGES[asset.type]}
+            style={{ width: icon, height: icon }}
+            resizeMode="contain"
+          />
+          {atShop ? (
+            compact ? (
+              <Image
+                source={require('../../assets/location/workshop.png')}
+                style={styles.badgeIcon}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={styles.badge} numberOfLines={1}>
+                {t.locationServiceCenter}
+              </Text>
+            )
+          ) : null}
+        </View>
+        <View
+          style={[
+            styles.conditionDot,
+            compact && styles.conditionDotCompact,
+            { backgroundColor: conditionColor(asset.condition) },
+          ]}
+          accessibilityLabel={t[asset.condition]}
         />
-        {asset.location === 'service_center' ? (
-          compact ? (
-            <Image
-              source={require('../../assets/location/workshop.png')}
-              style={styles.badgeIcon}
-              resizeMode="contain"
-            />
-          ) : (
-            <Text style={styles.badge} numberOfLines={1}>
-              {t.locationServiceCenter}
-            </Text>
-          )
-        ) : null}
       </View>
       <View style={styles.body}>
         <Text style={[styles.name, compact && styles.nameCompact]} numberOfLines={compact ? 2 : 2}>
@@ -105,10 +122,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   pressed: { opacity: 0.78 },
-  top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 },
+  top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  media: { flex: 1, alignItems: 'flex-start', gap: 6 },
+  conditionDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
+  },
+  conditionDotCompact: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
   badge: {
-    flexShrink: 1,
-    maxWidth: '58%',
+    alignSelf: 'flex-start',
     fontSize: 10,
     fontWeight: '700',
     color: colors.text,

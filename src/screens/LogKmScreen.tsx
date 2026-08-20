@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
+import { DEFAULT_INTERVALS } from '../data/seed';
 import { formatInt, formatKm, parseNumber } from '../domain/format';
 import { dictionaries } from '../i18n/strings';
 import { NumberField } from '../components/NumberField';
@@ -20,6 +21,7 @@ export function LogKmScreen({ navigation, route }: Props) {
 
   const parsed = parseNumber(km);
   const previous = asset?.usageCurrent ?? null;
+  const kmCapable = asset != null && DEFAULT_INTERVALS[asset.type]?.km != null;
 
   const kmError = useMemo(() => {
     if (parsed == null) return null;
@@ -45,7 +47,7 @@ export function LogKmScreen({ navigation, route }: Props) {
     );
   }
 
-  if (!asset.usageEnabled) {
+  if (!kmCapable) {
     return (
       <View style={styles.center}>
         <Text style={styles.notFound}>{t.logKmNotEnabled}</Text>
@@ -64,7 +66,7 @@ export function LogKmScreen({ navigation, route }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{t.logKmNow}</Text>
       <Text style={styles.lead}>{asset.name}</Text>
-      <Text style={styles.hint}>{t.logKmLead}</Text>
+      <Text style={styles.hint}>{asset.usageEnabled ? t.logKmLead : t.logKmLeadAny}</Text>
       <Text style={styles.requiredHint}>{t.requiredHint}</Text>
 
       {previous != null ? (

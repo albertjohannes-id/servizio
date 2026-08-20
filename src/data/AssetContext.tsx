@@ -4,8 +4,10 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import { AppState as RNAppState } from 'react-native';
 import {
   AppEvent,
   AppState,
@@ -20,15 +22,33 @@ import {
 } from '../domain/types';
 import { todayIso } from '../domain/status';
 import { blankState, clearState, emptyState, loadState, normalizeAsset, sampleState, saveState } from './repository';
-import { createSeedAssets, mergeSeedVendors, SEED_VENDORS } from './seed';
+import { mergeSeedVendors, SEED_VENDORS } from './seed';
+import { loadSyncMeta, markDirty, SyncMeta } from './syncStorage';
+import {
+  resolveConflictKeepLocal,
+  resolveConflictUseCloud,
+  runCloudSync,
+  SyncConflict,
+  SyncResult,
+} from './cloudSync';
 
 type AssetInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'archived'> & {
   id?: string;
 };
 
+export type SyncUiStatus = 'idle' | 'pending' | 'syncing' | 'offline' | 'conflict' | 'error' | 'not_linked';
+
 interface AssetContextValue {
   ready: boolean;
   state: AppState;
+  syncStatus: SyncUiStatus;
+  syncMeta: SyncMeta;
+  lastSyncError: string | null;
+  syncConflict: SyncConflict | null;
+  syncNow: () => Promise<SyncResult>;
+  resolveSyncKeepLocal: () => Promise<void>;
+  resolveSyncUseCloud: () => Promise<void>;
+  applyRemoteState: (next: AppState) => Promise<void>;
   setLanguage: (lang: 'en' | 'id') => void;
   upsertAsset: (input: AssetInput) => string;
   archiveAsset: (id: string) => void;
@@ -56,6 +76,11 @@ interface AssetContextValue {
     usageInterval?: number | null;
     usageCurrent?: number | null;
   }) => void;
+  /** Attach, replace, or clear photos on an existing service log (marks sync dirty). */
+  updateLogPhotos: (
+    logId: string,
+    patch: { receiptUri?: string | null; serviceTagUri?: string | null }
+  ) => void;
   addVendor: (name: string) => Vendor;
   track: (eventType: string, payload?: Record<string, unknown>) => void;
   resetDemo: () => void;
@@ -92,10 +117,27 @@ function makeChange(
 export function AssetProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<AppState | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncUiStatus>('idle');
+  const [syncMeta, setSyncMeta] = useState<SyncMeta>({
+    lastSyncedRevision: 0,
+    dirty: false,
+    lastSyncedAt: null,
+  });
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [syncConflict, setSyncConflict] = useState<SyncConflict | null>(null);
+  const syncingRef = useRef(false);
+  const conflictRef = useRef(false);
+
+  const refreshSyncMeta = useCallback(async () => {
+    const meta = await loadSyncMeta();
+    setSyncMeta(meta);
+    return meta;
+  }, []);
 
   useEffect(() => {
-    loadState().then((s) => {
+    Promise.all([loadState(), loadSyncMeta()]).then(([s, meta]) => {
       setState(s);
+      setSyncMeta(meta);
       setReady(true);
     });
   }, []);
@@ -107,8 +149,121 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
   }, [ready, state]);
 
   const mutate = useCallback((fn: (prev: AppState) => AppState) => {
-    setState((prev) => (prev ? fn(prev) : prev));
-  }, []);
+    setState((prev) => {
+      if (!prev) return prev;
+      void markDirty().then(() => {
+        void refreshSyncMeta().then((meta) => {
+          if (!conflictRef.current) {
+            setSyncStatus(meta.dirty ? 'pending' : 'idle');
+          }
+        });
+      });
+      return fn(prev);
+    });
+  }, [refreshSyncMeta]);
+
+  const applyRemoteState = useCallback(async (next: AppState) => {
+    await saveState(next);
+    setState(next);
+    await refreshSyncMeta();
+  }, [refreshSyncMeta]);
+
+  const syncNow = useCallback(async (): Promise<SyncResult> => {
+    if (syncingRef.current) {
+      return { type: 'idle', revision: syncMeta.lastSyncedRevision, lastSyncedAt: syncMeta.lastSyncedAt };
+    }
+    if (conflictRef.current) {
+      return {
+        type: 'conflict',
+        serverRevision: syncConflict?.serverRevision ?? 0,
+        local: state ?? blankState(),
+        server: syncConflict?.server ?? null,
+      };
+    }
+
+    syncingRef.current = true;
+    setSyncStatus('syncing');
+    setLastSyncError(null);
+    try {
+      const result = await runCloudSync();
+      if (result.type === 'pulled') {
+        setState(result.state);
+        conflictRef.current = false;
+        setSyncConflict(null);
+        setSyncStatus('idle');
+      } else if (result.type === 'conflict') {
+        conflictRef.current = true;
+        setSyncConflict(result);
+        setSyncStatus('conflict');
+      } else if (result.type === 'offline') {
+        const meta = await refreshSyncMeta();
+        setSyncStatus(meta.dirty ? 'offline' : 'offline');
+      } else if (result.type === 'error') {
+        setLastSyncError(result.message);
+        setSyncStatus('error');
+      } else if (result.type === 'not_linked') {
+        conflictRef.current = false;
+        setSyncConflict(null);
+        setSyncStatus('not_linked');
+      } else {
+        conflictRef.current = false;
+        setSyncConflict(null);
+        const meta = await refreshSyncMeta();
+        setSyncStatus(meta.dirty ? 'pending' : 'idle');
+      }
+      if (result.type === 'pushed' || result.type === 'pulled' || result.type === 'idle') {
+        await refreshSyncMeta();
+      }
+      return result;
+    } finally {
+      syncingRef.current = false;
+    }
+  }, [refreshSyncMeta, state, syncConflict, syncMeta.lastSyncedAt, syncMeta.lastSyncedRevision]);
+
+  const resolveSyncKeepLocal = useCallback(async () => {
+    if (!syncConflict) return;
+    try {
+      await resolveConflictKeepLocal(syncConflict.local, syncConflict.serverRevision);
+      conflictRef.current = false;
+      setSyncConflict(null);
+      await refreshSyncMeta();
+      setSyncStatus('idle');
+    } catch (err) {
+      setLastSyncError(err instanceof Error ? err.message : 'conflict_resolve_failed');
+      setSyncStatus('error');
+    }
+  }, [refreshSyncMeta, syncConflict]);
+
+  const resolveSyncUseCloud = useCallback(async () => {
+    if (!syncConflict?.server) return;
+    try {
+      const next = await resolveConflictUseCloud(syncConflict.server, syncConflict.serverRevision);
+      setState(next);
+      conflictRef.current = false;
+      setSyncConflict(null);
+      await refreshSyncMeta();
+      setSyncStatus('idle');
+    } catch (err) {
+      setLastSyncError(err instanceof Error ? err.message : 'conflict_resolve_failed');
+      setSyncStatus('error');
+    }
+  }, [refreshSyncMeta, syncConflict]);
+
+  useEffect(() => {
+    if (!ready || conflictRef.current) return;
+    const id = setTimeout(() => {
+      void syncNow();
+    }, 900);
+    return () => clearTimeout(id);
+  }, [ready, state, syncNow]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const sub = RNAppState.addEventListener('change', (next) => {
+      if (next === 'active' && !conflictRef.current) void syncNow();
+    });
+    return () => sub.remove();
+  }, [ready, syncNow]);
 
   const track = useCallback((eventType: string, payload?: Record<string, unknown>) => {
     const event: AppEvent = {
@@ -134,6 +289,14 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
     return {
       ready,
       state: s,
+      syncStatus,
+      syncMeta,
+      lastSyncError,
+      syncConflict,
+      syncNow,
+      resolveSyncKeepLocal,
+      resolveSyncUseCloud,
+      applyRemoteState,
       setLanguage: (language) => mutate((prev) => ({ ...prev, language })),
       setHomeColumns: (homeColumns) => mutate((prev) => ({ ...prev, homeColumns })),
       upsertAsset: (input) => {
@@ -318,6 +481,24 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
           hasServiceTag: !!input.serviceTagUri,
         });
       },
+      updateLogPhotos: (logId, patch) => {
+        mutate((prev) => ({
+          ...prev,
+          logs: prev.logs.map((log) => {
+            if (log.id !== logId) return log;
+            return {
+              ...log,
+              ...(patch.receiptUri !== undefined ? { receiptUri: patch.receiptUri } : {}),
+              ...(patch.serviceTagUri !== undefined ? { serviceTagUri: patch.serviceTagUri } : {}),
+            };
+          }),
+        }));
+        track('service_photos_updated', {
+          logId,
+          receipt: patch.receiptUri !== undefined,
+          serviceTag: patch.serviceTagUri !== undefined,
+        });
+      },
       addVendor: (name) => {
         const vendor: Vendor = {
           id: nid('vendor'),
@@ -357,13 +538,27 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
           vendors: mergeSeedVendors(next.vendors?.length ? next.vendors : [...SEED_VENDORS]),
           homeColumns: next.homeColumns === 3 ? 3 : 2,
         };
+        await markDirty();
         await saveState(merged);
         setState(merged);
       },
       logsFor: (assetId) => s.logs.filter((l) => l.assetId === assetId),
       changesFor: (assetId) => (s.changes ?? []).filter((c) => c.assetId === assetId),
     };
-  }, [ready, state, mutate, track]);
+  }, [
+    ready,
+    state,
+    mutate,
+    track,
+    syncStatus,
+    syncMeta,
+    lastSyncError,
+    syncConflict,
+    syncNow,
+    resolveSyncKeepLocal,
+    resolveSyncUseCloud,
+    applyRemoteState,
+  ]);
 
   return <AssetContext.Provider value={value}>{children}</AssetContext.Provider>;
 }

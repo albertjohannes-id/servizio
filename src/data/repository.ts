@@ -1,17 +1,15 @@
 /**
- * Local-only persistence for MVP.
+ * Local persistence (AsyncStorage / localStorage on web).
  *
- * Driver: AsyncStorage on native, localStorage via the same API on web.
- * No remote database. No Supabase client in this phase.
- *
- * Phase 1.1: swap this module for a Supabase repository that upserts
- * the same AppState shape (assets, service_logs, vendors) to Postgres.
+ * Phase 1.1: working copy stays here; cloud D1 holds the authoritative
+ * sync blob after email verification. Callers mark sync dirty via syncStorage
+ * when the user edits data — not on every load/pull.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Asset, AssetLocation } from '../domain/types';
 import { createSeedAssets, mergeSeedVendors, SEED_VENDORS } from './seed';
 
-export const STORAGE_DRIVER = 'local' as const;
+export const STORAGE_DRIVER = 'local_with_cloud_sync' as const;
 
 const KEY = 'servizio_v1_state';
 

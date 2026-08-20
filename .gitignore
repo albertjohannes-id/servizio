@@ -27,6 +27,11 @@ expo-env.d.ts
 !.env.example
 *.pem
 
+# Wrangler / D1 local
+.wrangler/
+dev.vars
+.dev.vars
+
 # Logs and debug
 npm-debug.*
 yarn-debug.*

@@ -21,7 +21,22 @@ import {
   saveAuthProfile,
   saveUnlockSession,
 } from './authStorage';
+import {
+  ApiError,
+  checkEmail,
+  registerUser,
+  requestOtp,
+  verifyOtp,
+  VerifyOtpResult,
+} from './apiClient';
 import { clearState } from './repository';
+import {
+  clearCloudData,
+  loadCloudSession,
+  saveCloudSession,
+  saveSyncMeta,
+  CloudSession,
+} from './syncStorage';
 import {
   generateSalt,
   hashPin,
@@ -29,8 +44,14 @@ import {
   UNLOCK_TTL_MS,
   verifyPin,
 } from './pinAuth';
+import { AppState } from '../domain/types';
 
 export type AuthGate = 'loading' | 'setup' | 'locked' | 'unlocked';
+
+export type EmailCheckResult =
+  | { type: 'new' }
+  | { type: 'existing'; emailVerified: boolean }
+  | { type: 'offline' };
 
 type AuthContextValue = {
   ready: boolean;
@@ -40,7 +61,22 @@ type AuthContextValue = {
   canResetAfterLockout: boolean;
   setupEmail: string;
   setSetupEmail: (value: string) => void;
+  emailVerified: boolean;
+  cloudLinked: boolean;
+  pendingCloudBlob: AppState | null;
+  clearPendingCloudBlob: () => void;
+  checkSetupEmail: () => Promise<EmailCheckResult>;
+  requestSetupOtp: () => Promise<{ ok: true; devOtp?: string } | { ok: false; error: string }>;
+  verifySetupOtp: (
+    code: string
+  ) => Promise<{ ok: true; hasCloudData: boolean } | { ok: false; error: string }>;
   completeSetup: (pin: string, confirmPin: string) => Promise<string | null>;
+  registerCloudAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  startEmailVerification: () => Promise<{ ok: true; devOtp?: string } | { ok: false; error: string }>;
+  confirmEmailVerification: (
+    code: string
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  refreshCloudStatus: () => Promise<void>;
   tryUnlock: (pin: string) => Promise<string | null>;
   verifyCurrentPin: (pin: string) => Promise<boolean>;
   lock: () => Promise<void>;
@@ -69,16 +105,34 @@ async function notifyDeviceReset(reason: 'lockout' | 'manual'): Promise<void> {
   }
 }
 
+function applySessionFromVerify(result: VerifyOtpResult): CloudSession {
+  return {
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    accessExpiresAt: result.accessExpiresAt,
+    userId: result.userId,
+    email: result.email,
+    emailVerified: result.emailVerified,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [gate, setGate] = useState<AuthGate>('loading');
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [setupEmail, setSetupEmail] = useState('');
+  const [cloudSession, setCloudSession] = useState<CloudSession | null>(null);
+  const [pendingCloudBlob, setPendingCloudBlob] = useState<AppState | null>(null);
   const profileRef = useRef<AuthProfile | null>(null);
 
   const syncProfile = useCallback((next: AuthProfile | null) => {
     profileRef.current = next;
     setProfile(next);
+  }, []);
+
+  const refreshCloudStatus = useCallback(async () => {
+    const session = await loadCloudSession();
+    setCloudSession(session);
   }, []);
 
   const applyGateFromStorage = useCallback(async (auth: AuthProfile | null) => {
@@ -100,10 +154,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const legacy = await loadLegacyEmail();
         if (legacy) setSetupEmail(legacy);
       }
+      await refreshCloudStatus();
       await applyGateFromStorage(auth);
       setReady(true);
     })();
-  }, [applyGateFromStorage, syncProfile]);
+  }, [applyGateFromStorage, refreshCloudStatus, syncProfile]);
 
   const touchActivity = useCallback(() => {
     if (gate !== 'unlocked') return;
@@ -129,6 +184,116 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearInterval(interval);
     };
   }, [gate]);
+
+  const checkSetupEmail = useCallback(async (): Promise<EmailCheckResult> => {
+    const email = setupEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { type: 'offline' };
+    try {
+      const result = await checkEmail(email);
+      if (result.exists) return { type: 'existing', emailVerified: result.emailVerified };
+      return { type: 'new' };
+    } catch (err) {
+      if (err instanceof ApiError && (err.code === 'network_error' || err.status === 0)) {
+        return { type: 'offline' };
+      }
+      return { type: 'offline' };
+    }
+  }, [setupEmail]);
+
+  const requestSetupOtp = useCallback(async () => {
+    const email = setupEmail.trim().toLowerCase();
+    try {
+      const result = await requestOtp(email);
+      return { ok: true as const, devOtp: result.devOtp };
+    } catch (err) {
+      if (err instanceof ApiError) {
+        return { ok: false as const, error: err.code };
+      }
+      return { ok: false as const, error: 'request_failed' };
+    }
+  }, [setupEmail]);
+
+  const verifySetupOtp = useCallback(
+    async (code: string) => {
+      const email = setupEmail.trim().toLowerCase();
+      try {
+        const result = await verifyOtp(email, code);
+        const session = applySessionFromVerify(result);
+        await saveCloudSession(session);
+        setCloudSession(session);
+        await saveSyncMeta({
+          lastSyncedRevision: result.sync.revision,
+          dirty: false,
+          lastSyncedAt: result.sync.updatedAt,
+        });
+        const blob = result.sync.blob;
+        const hasCloudData =
+          result.sync.hasData &&
+          !!blob &&
+          ((blob.assets?.length ?? 0) > 0 || (blob.logs?.length ?? 0) > 0);
+        if (hasCloudData && blob) setPendingCloudBlob(blob);
+        else setPendingCloudBlob(null);
+        return { ok: true as const, hasCloudData };
+      } catch (err) {
+        if (err instanceof ApiError) {
+          return { ok: false as const, error: err.code };
+        }
+        return { ok: false as const, error: 'verify_failed' };
+      }
+    },
+    [setupEmail]
+  );
+
+  const registerCloudAccount = useCallback(async () => {
+    const email = setupEmail.trim().toLowerCase();
+    try {
+      await registerUser(email);
+      return { ok: true as const };
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'email_exists') {
+        return { ok: false as const, error: 'email_exists' };
+      }
+      if (err instanceof ApiError && err.code === 'network_error') {
+        return { ok: false as const, error: 'network_error' };
+      }
+      return { ok: false as const, error: 'register_failed' };
+    }
+  }, [setupEmail]);
+
+  const startEmailVerification = useCallback(async () => {
+    const email = (profile?.email ?? setupEmail).trim().toLowerCase();
+    try {
+      const result = await requestOtp(email);
+      return { ok: true as const, devOtp: result.devOtp };
+    } catch (err) {
+      if (err instanceof ApiError) return { ok: false as const, error: err.code };
+      return { ok: false as const, error: 'request_failed' };
+    }
+  }, [profile?.email, setupEmail]);
+
+  const confirmEmailVerification = useCallback(
+    async (code: string) => {
+      const email = (profile?.email ?? setupEmail).trim().toLowerCase();
+      try {
+        const result = await verifyOtp(email, code);
+        const session = applySessionFromVerify(result);
+        await saveCloudSession(session);
+        setCloudSession(session);
+        await saveSyncMeta({
+          lastSyncedRevision: result.sync.revision,
+          dirty: true,
+          lastSyncedAt: null,
+        });
+        return { ok: true as const };
+      } catch (err) {
+        if (err instanceof ApiError) return { ok: false as const, error: err.code };
+        return { ok: false as const, error: 'verify_failed' };
+      }
+    },
+    [profile?.email, setupEmail]
+  );
+
+  const clearPendingCloudBlob = useCallback(() => setPendingCloudBlob(null), []);
 
   const completeSetup = useCallback(
     async (pin: string, confirmPin: string): Promise<string | null> => {
@@ -198,8 +363,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (reason: 'lockout' | 'manual') => {
       await clearAuthProfile();
       await clearState();
+      await clearCloudData();
       await AsyncStorage.removeItem('servizio_v1_session');
       syncProfile(null);
+      setCloudSession(null);
+      setPendingCloudBlob(null);
       setSetupEmail('');
       setGate('setup');
       await notifyDeviceReset(reason);
@@ -216,7 +384,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       canResetAfterLockout: (profile?.failedAttempts ?? 0) >= MAX_PIN_ATTEMPTS,
       setupEmail,
       setSetupEmail,
+      emailVerified: cloudSession?.emailVerified ?? false,
+      cloudLinked: !!cloudSession,
+      pendingCloudBlob,
+      clearPendingCloudBlob,
+      checkSetupEmail,
+      requestSetupOtp,
+      verifySetupOtp,
       completeSetup,
+      registerCloudAccount,
+      startEmailVerification,
+      confirmEmailVerification,
+      refreshCloudStatus,
       tryUnlock,
       verifyCurrentPin,
       lock,
@@ -228,7 +407,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       gate,
       profile,
       setupEmail,
+      cloudSession,
+      pendingCloudBlob,
+      clearPendingCloudBlob,
+      checkSetupEmail,
+      requestSetupOtp,
+      verifySetupOtp,
       completeSetup,
+      registerCloudAccount,
+      startEmailVerification,
+      confirmEmailVerification,
+      refreshCloudStatus,
       tryUnlock,
       verifyCurrentPin,
       lock,

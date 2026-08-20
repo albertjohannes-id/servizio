@@ -26,13 +26,18 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 const GRID_GAP = 12;
 
 export function HomeScreen({ navigation }: Props) {
-  const { email } = useAuth();
-  const { ready, state, setLanguage } = useAssets();
+  const { email, cloudLinked } = useAuth();
+  const { ready, state, setLanguage, syncStatus, syncMeta } = useAssets();
   const t = dictionaries[state.language];
   const insets = useSafeAreaInsets();
   const assets = useMemo(() => sortAssetsForHome(state.assets), [state.assets]);
   const [gridWidth, setGridWidth] = useState(0);
   const columns = state.homeColumns === 3 ? 3 : 2;
+
+  const showSyncBanner =
+    syncStatus === 'conflict' ||
+    syncStatus === 'error' ||
+    (cloudLinked && syncStatus === 'offline' && syncMeta.dirty);
 
   const tileSize =
     gridWidth > 0 ? (gridWidth - GRID_GAP * (columns - 1)) / columns : 0;
@@ -70,6 +75,28 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {showSyncBanner ? (
+          <Pressable
+            onPress={() => navigation.navigate('Account')}
+            style={styles.syncBanner}
+          >
+            <Text style={styles.syncBannerText}>
+              {syncStatus === 'conflict'
+                ? t.syncConflictTitle
+                : syncStatus === 'error'
+                  ? t.syncError
+                  : t.syncOffline}
+            </Text>
+            <Text style={styles.syncBannerSub}>
+              {syncStatus === 'conflict'
+                ? t.syncConflictBody
+                : syncStatus === 'error'
+                  ? t.syncNow
+                  : t.syncPending}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <ScrollView
           contentContainerStyle={{ paddingBottom: 16 }}
           style={styles.scroll}
@@ -80,6 +107,7 @@ export function HomeScreen({ navigation }: Props) {
                 <LegendDot color={colors.tileOverdue} label={t.sectionOverdue} />
                 <LegendDot color={colors.tileDueSoon} label={t.sectionDueSoon} />
                 <LegendDot color={colors.tileOnTrack} label={t.sectionOnTrack} />
+                <LegendDot color={colors.tileUntracked} label={t.sectionNoSchedule} outlined />
               </View>
               <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
                 {tileSize > 0
@@ -131,10 +159,16 @@ export function HomeScreen({ navigation }: Props) {
   );
 }
 
-function LegendDot({ color, label }: { color: string; label: string }) {
+function LegendDot({ color, label, outlined }: { color: string; label: string; outlined?: boolean }) {
   return (
     <View style={styles.legendItem}>
-      <View style={[styles.legendSwatch, { backgroundColor: color }]} />
+      <View
+        style={[
+          styles.legendSwatch,
+          { backgroundColor: color },
+          outlined && styles.legendSwatchOutlined,
+        ]}
+      />
       <Text style={styles.legendLabel}>{label}</Text>
     </View>
   );
@@ -161,10 +195,21 @@ const styles = StyleSheet.create({
   langRow: { flexDirection: 'row', gap: 14 },
   lang: { fontSize: 13, color: colors.muted },
   langOn: { color: colors.text, textDecorationLine: 'underline' },
+  syncBanner: {
+    marginBottom: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  syncBannerText: { fontSize: 14, fontWeight: '500', color: colors.text },
+  syncBannerSub: { marginTop: 4, fontSize: 12, color: colors.muted, lineHeight: 18 },
   scroll: { flex: 1 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: spacing.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 12, height: 12, borderRadius: 3 },
+  legendSwatchOutlined: { borderWidth: 1, borderColor: colors.line },
   legendLabel: { fontSize: 12, color: colors.muted },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   empty: { paddingTop: spacing.xl },

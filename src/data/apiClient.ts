@@ -17,7 +17,16 @@ export class ApiError extends Error {
 function apiBase(): string {
   const fromEnv =
     typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_API_URL : undefined;
-  return String(fromEnv || 'http://127.0.0.1:8787').replace(/\/+$/, '');
+  const baked = String(fromEnv || '').replace(/\/+$/, '');
+  // Safety: a public workers.dev build must never call localhost (phone/offline banner).
+  if (
+    typeof window !== 'undefined' &&
+    /workers\.dev$/i.test(window.location.hostname) &&
+    (!baked || /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baked))
+  ) {
+    return 'https://servizio-api.albertjohannes-id.workers.dev';
+  }
+  return baked || 'http://127.0.0.1:8787';
 }
 
 export function isApiConfigured(): boolean {

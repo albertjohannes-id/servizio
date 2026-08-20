@@ -32,6 +32,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "export:web": "expo export --platform web",
+    "deploy:web": "EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev expo export --platform web && wrangler deploy",
     "api:dev": "npm --prefix api run dev",
     "api:db:local": "npm --prefix api run db:local",
     "typecheck": "tsc --noEmit && npm --prefix api run typecheck"

@@ -47,12 +47,15 @@ Do not put `RESEND_API_KEY` on the static `servizio` Worker; it belongs on **`se
 Manual deploy from repo root of the app:
 
 ```bash
+npm run deploy:web
+# or:
 EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev npm run export:web
 npx wrangler deploy
 # API (when Worker/R2/D1 changes):
 cd api && npm run deploy
 ```
 
+**Important:** `expo export` bakes `EXPO_PUBLIC_API_URL` at build time. Exporting without it leaves `127.0.0.1:8787` in the bundle — phones will show the offline sync banner. Always use `npm run deploy:web` (or set the env var). Cloudflare Git builds must set the same variable.
 
 ## Local production preview
 

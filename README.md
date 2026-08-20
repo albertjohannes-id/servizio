@@ -20,7 +20,7 @@ Requires Node 20+.
 - JSON **export / import** from Account (photos are not included).
 - Assets: kind, name, brand, type/model, manufacture year, purchase year, purchase-at.
 - **Condition** (working / needs attention / not working), **schedule** (on track / due soon / overdue), and **location** (home / service center) are separate.
-- **Dual schedule** for vehicles: track by **date**, by **km**, or **both** (car / motorcycle default both).
+- **Dual schedule** for vehicles: track by **date**, by **km**, or **both** — or **Not yet** (register first, add schedule later; default for new assets).
 - Home dashboard: status-colored tiles with plain-language maintenance lines, e.g. `Service in 45 days` and `Service in 500 km`. Compact 3-column grid merges both into one line (`In 45 days · 500 km`).
 - Account → Appearance chooses **2 or 3** tiles per row.
 - **Log service** — single manual form: service date, **routine vs one-off** (one-off does not change schedule), next due date with **+1…+6 month** shortcuts from service date, optional next km, notes, cost, receipt photo (tap to view full size), vendor.

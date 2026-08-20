@@ -2,11 +2,12 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TYPE_IMAGES } from '../data/typeImages';
 import { Asset, ServiceStatus } from '../domain/types';
-import { maintenanceTileDisplay, resolveServiceStatus } from '../domain/status';
+import { isScheduleTracked, maintenanceTileDisplay, resolveServiceStatus } from '../domain/status';
 import { Dictionary, Lang } from '../i18n/strings';
 import { colors } from '../theme';
 
-function tileFill(status: ServiceStatus): string {
+function tileFill(asset: Asset, status: ServiceStatus): string {
+  if (!isScheduleTracked(asset)) return colors.tileUntracked;
   if (status === 'overdue') return colors.tileOverdue;
   if (status === 'due_soon') return colors.tileDueSoon;
   return colors.tileOnTrack;
@@ -43,7 +44,7 @@ export function AssetTile({
           width: size,
           height: size,
           padding: pad,
-          backgroundColor: tileFill(status),
+          backgroundColor: tileFill(asset, status),
         },
         pressed && styles.pressed,
       ]}
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 8,
   },
-  badgeIcon: { width: 22, height: 22 },
+  badgeIcon: { width: 22, height: 22, backgroundColor: 'transparent' },
   body: { gap: 2 },
   name: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
   nameCompact: { fontSize: 13, lineHeight: 16 },

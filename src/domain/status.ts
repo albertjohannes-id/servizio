@@ -53,8 +53,14 @@ export function addMonthsIso(isoDate: string, months: number): string {
   return todayIso(new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
 }
 
+/** True when the asset has at least one active schedule (date and/or km). */
+export function isScheduleTracked(asset: Asset): boolean {
+  return asset.scheduleByDate !== false || asset.usageEnabled;
+}
+
 /** Schedule status from date + optional km. Location is separate. */
 export function computeScheduleStatus(asset: Asset, now = new Date()): ServiceStatus {
+  if (!isScheduleTracked(asset)) return 'on_schedule';
   const byDate = asset.scheduleByDate !== false;
   let dateStatus: ServiceStatus | null = null;
   if (byDate) {
@@ -91,6 +97,7 @@ export function resolveServiceStatus(asset: Asset, now = new Date()): ServiceSta
 
 export function sortAssetsForHome(assets: Asset[], now = new Date()): Asset[] {
   const rank = (a: Asset) => {
+    if (!isScheduleTracked(a)) return 3;
     const s = resolveServiceStatus(a, now);
     if (s === 'overdue') return 0;
     if (s === 'due_soon') return 1;
@@ -180,6 +187,7 @@ export function maintenanceSummary(
   lang: Lang,
   now = new Date()
 ): { primary: string; secondary?: string } {
+  if (!isScheduleTracked(asset)) return { primary: t.notTrackingYet };
   const lines = maintenanceLines(asset, t, lang, now);
   if (lines.length === 0) return { primary: t.noSchedule };
   if (lines.length === 1) return { primary: lines[0].text };
@@ -194,6 +202,7 @@ export function maintenanceTileDisplay(
   compact: boolean,
   now = new Date()
 ): string[] {
+  if (!isScheduleTracked(asset)) return [t.notTrackingYet];
   const lines = maintenanceLines(asset, t, lang, now);
   if (lines.length === 0) return [t.noSchedule];
   if (compact && lines.length > 1) {

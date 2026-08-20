@@ -4,7 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { pickImage } from '../data/pickImage';
 import { DEFAULT_INTERVALS } from '../data/seed';
-import { addDaysIso, todayIso } from '../domain/status';
+import { addDaysIso, isScheduleTracked, todayIso } from '../domain/status';
 import { ServiceLogKind } from '../domain/types';
 import { dictionaries } from '../i18n/strings';
 import { formatInt, parseNumber } from '../domain/format';
@@ -12,6 +12,12 @@ import { DateField } from '../components/DateField';
 import { MonthQuickPick } from '../components/MonthQuickPick';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ServiceKindPicker } from '../components/ServiceKindPicker';
+import {
+  ScheduleMode,
+  ScheduleModePicker,
+  scheduleModeFromAsset,
+  scheduleModeToFlags,
+} from '../components/ScheduleModePicker';
 import { TappablePhoto } from '../components/TappablePhoto';
 import { TextField } from '../components/TextField';
 import { NumberField } from '../components/NumberField';
@@ -20,6 +26,10 @@ import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LogService'>;
+
+function suggestedModeForType(type: keyof typeof DEFAULT_INTERVALS): ScheduleMode {
+  return DEFAULT_INTERVALS[type]?.km != null ? 'both' : 'date';
+}
 
 export function LogServiceScreen({ navigation, route }: Props) {
   const { state, logService, addVendor } = useAssets();
@@ -34,6 +44,18 @@ export function LogServiceScreen({ navigation, route }: Props) {
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [newVendor, setNewVendor] = useState('');
 
+  const untracked = asset != null && !isScheduleTracked(asset);
+  const kmCapable = asset != null && DEFAULT_INTERVALS[asset.type]?.km != null;
+  const typeDefault = asset ? DEFAULT_INTERVALS[asset.type] : DEFAULT_INTERVALS.other;
+
+  const [setupMode, setSetupMode] = useState<ScheduleMode>(() =>
+    asset ? (untracked ? suggestedModeForType(asset.type) : scheduleModeFromAsset(asset, asset.type)) : 'date'
+  );
+  const [usageInterval, setUsageInterval] = useState(String(typeDefault.km ?? '5000'));
+  const [usageCurrent, setUsageCurrent] = useState(
+    asset?.usageCurrent != null ? String(asset.usageCurrent) : ''
+  );
+
   const suggestedNext = useMemo(() => {
     if (!asset) return servicedAt;
     const days = DEFAULT_INTERVALS[asset.type]?.days ?? 180;
@@ -41,23 +63,56 @@ export function LogServiceScreen({ navigation, route }: Props) {
   }, [asset, servicedAt]);
 
   const [nextServiceAt, setNextServiceAt] = useState(suggestedNext);
-  const [usageNextDue, setUsageNextDue] = useState(
-    asset?.usageEnabled && asset.usageCurrent != null && asset.usageInterval != null
-      ? String(asset.usageCurrent + asset.usageInterval)
-      : ''
-  );
+  const [usageNextDue, setUsageNextDue] = useState(() => {
+    if (!asset?.usageEnabled || asset.usageCurrent == null || asset.usageInterval == null) return '';
+    return String(asset.usageCurrent + asset.usageInterval);
+  });
 
-  const tracksDate = asset?.scheduleByDate !== false;
-  const tracksKm = !!asset?.usageEnabled;
-  const showScheduleFields = serviceKind === 'routine';
+  React.useEffect(() => {
+    if (!asset || !untracked || serviceKind !== 'routine') return;
+    const interval = parseNumber(usageInterval) ?? typeDefault.km ?? 5000;
+    const current = parseNumber(usageCurrent);
+    if (current != null) setUsageNextDue(String(current + interval));
+  }, [asset, untracked, serviceKind, usageCurrent, usageInterval, typeDefault.km]);
+
+  const activeFlags = useMemo(() => {
+    if (!asset) return { scheduleByDate: false, usageEnabled: false };
+    if (untracked && serviceKind === 'routine') {
+      return scheduleModeToFlags(setupMode, !!kmCapable);
+    }
+    return {
+      scheduleByDate: asset.scheduleByDate !== false,
+      usageEnabled: asset.usageEnabled,
+    };
+  }, [asset, untracked, serviceKind, setupMode, kmCapable]);
+
+  const { scheduleByDate: tracksDate, usageEnabled: tracksKm } = activeFlags;
+  const showScheduleFields = serviceKind === 'routine' && (untracked ? setupMode !== 'none' : true);
+  const showSetupPicker = untracked && serviceKind === 'routine';
 
   const canSave = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(servicedAt)) return false;
     if (serviceKind !== 'routine') return true;
+    if (untracked && setupMode === 'none') return false;
     if (tracksDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextServiceAt)) return false;
-    if (tracksKm && parseNumber(usageNextDue) == null) return false;
+    if (tracksKm) {
+      if (parseNumber(usageNextDue) == null) return false;
+      if (untracked && (parseNumber(usageInterval) == null || parseNumber(usageInterval)! <= 0)) {
+        return false;
+      }
+    }
     return true;
-  }, [servicedAt, serviceKind, tracksDate, tracksKm, nextServiceAt, usageNextDue]);
+  }, [
+    servicedAt,
+    serviceKind,
+    untracked,
+    setupMode,
+    tracksDate,
+    tracksKm,
+    nextServiceAt,
+    usageNextDue,
+    usageInterval,
+  ]);
 
   if (!asset) {
     return (
@@ -85,6 +140,8 @@ export function LogServiceScreen({ navigation, route }: Props) {
         vname = v.name;
       }
     }
+
+    const enablingSchedule = untracked && serviceKind === 'routine' && setupMode !== 'none';
     logService({
       assetId: asset.id,
       servicedAt,
@@ -98,6 +155,14 @@ export function LogServiceScreen({ navigation, route }: Props) {
       nextServiceAt: showScheduleFields && tracksDate ? nextServiceAt : undefined,
       usageNextDue:
         showScheduleFields && tracksKm ? parseNumber(usageNextDue) ?? asset.usageNextDue : undefined,
+      scheduleByDate: enablingSchedule ? activeFlags.scheduleByDate : undefined,
+      usageEnabled: enablingSchedule ? activeFlags.usageEnabled : undefined,
+      usageInterval:
+        enablingSchedule && tracksKm ? parseNumber(usageInterval) ?? asset.usageInterval : undefined,
+      usageCurrent:
+        enablingSchedule && tracksKm
+          ? parseNumber(usageCurrent) ?? asset.usageCurrent
+          : undefined,
     });
     navigation.navigate('AssetDetail', { assetId: asset.id, showSaved: true });
   };
@@ -111,6 +176,14 @@ export function LogServiceScreen({ navigation, route }: Props) {
       <DateField label={t.serviceDate} value={servicedAt} onChange={setServicedAt} required />
 
       <ServiceKindPicker value={serviceKind} onChange={setServiceKind} t={t} />
+
+      {showSetupPicker ? (
+        <View style={styles.setupBlock}>
+          <Text style={styles.setupTitle}>{t.setupScheduleFromLog}</Text>
+          <Text style={styles.setupHint}>{t.setupScheduleFromLogHint}</Text>
+          <ScheduleModePicker type={asset.type} value={setupMode} onChange={setSetupMode} t={t} />
+        </View>
+      ) : null}
 
       {showScheduleFields && tracksDate ? (
         <View>
@@ -130,13 +203,32 @@ export function LogServiceScreen({ navigation, route }: Props) {
       ) : null}
 
       {showScheduleFields && tracksKm ? (
-        <NumberField
-          label={t.nextKmDue}
-          lang={state.language}
-          value={usageNextDue}
-          onChangeDigits={setUsageNextDue}
-          required
-        />
+        <>
+          {untracked ? (
+            <>
+              <NumberField
+                label={t.currentKm}
+                lang={state.language}
+                value={usageCurrent}
+                onChangeDigits={setUsageCurrent}
+              />
+              <NumberField
+                label={t.intervalKm}
+                lang={state.language}
+                value={usageInterval}
+                onChangeDigits={setUsageInterval}
+                required
+              />
+            </>
+          ) : null}
+          <NumberField
+            label={t.nextKmDue}
+            lang={state.language}
+            value={usageNextDue}
+            onChangeDigits={setUsageNextDue}
+            required
+          />
+        </>
       ) : null}
 
       <TextField label={t.notes} value={notes} onChangeText={setNotes} multiline />
@@ -187,6 +279,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '500', color: colors.text, letterSpacing: -0.3 },
   lead: { marginTop: 6, marginBottom: 4, fontSize: 16, color: colors.muted },
   requiredHint: { marginBottom: 4, fontSize: 12, color: colors.muted },
+  setupBlock: {
+    marginTop: spacing.md,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    gap: 4,
+  },
+  setupTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  setupHint: { fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 4 },
   block: { marginTop: spacing.md, marginBottom: spacing.sm },
   receipt: { marginTop: 8 },
   actions: { marginTop: spacing.lg, gap: 10 },

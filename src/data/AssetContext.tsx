@@ -50,6 +50,11 @@ interface AssetContextValue {
     vendorName: string | null;
     nextServiceAt?: string;
     usageNextDue?: number | null;
+    /** Enable or update schedule flags when logging routine service on an untracked asset. */
+    scheduleByDate?: boolean;
+    usageEnabled?: boolean;
+    usageInterval?: number | null;
+    usageCurrent?: number | null;
   }) => void;
   addVendor: (name: string) => Vendor;
   track: (eventType: string, payload?: Record<string, unknown>) => void;
@@ -291,12 +296,17 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
               return { ...a, location: 'home', updatedAt: todayIso() };
             }
             const patch: Partial<Asset> = { location: 'home', updatedAt: todayIso() };
-            if (a.scheduleByDate !== false && input.nextServiceAt) {
-              patch.nextServiceAt = input.nextServiceAt;
-            }
-            if (a.usageEnabled && input.usageNextDue != null) {
-              patch.usageNextDue = input.usageNextDue;
-            }
+            if (input.scheduleByDate != null) patch.scheduleByDate = input.scheduleByDate;
+            if (input.usageEnabled != null) patch.usageEnabled = input.usageEnabled;
+            if (input.usageInterval != null) patch.usageInterval = input.usageInterval;
+            if (input.usageCurrent != null) patch.usageCurrent = input.usageCurrent;
+
+            const byDate =
+              (input.scheduleByDate != null ? input.scheduleByDate : a.scheduleByDate) !== false;
+            const byKm = input.usageEnabled != null ? input.usageEnabled : a.usageEnabled;
+
+            if (byDate && input.nextServiceAt) patch.nextServiceAt = input.nextServiceAt;
+            if (byKm && input.usageNextDue != null) patch.usageNextDue = input.usageNextDue;
             return { ...a, ...patch };
           }),
         }));

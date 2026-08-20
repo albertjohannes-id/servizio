@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { DEFAULT_INTERVALS, BRANDS_BY_TYPE, PURCHASE_AT_OPTIONS } from '../data/seed';
@@ -14,6 +14,12 @@ import { NumberField } from '../components/NumberField';
 import { SuggestField } from '../components/SuggestField';
 import { YearPicker } from '../components/YearPicker';
 import { ConditionPicker } from '../components/ConditionPicker';
+import {
+  ScheduleMode,
+  ScheduleModePicker,
+  scheduleModeFromAsset,
+  scheduleModeToFlags,
+} from '../components/ScheduleModePicker';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
@@ -27,6 +33,10 @@ function namePlaceholderFor(type: AssetType, t: Dictionary): string {
   if (type === 'water_heater') return t.namePlaceholder_water_heater;
   if (type === 'other') return t.namePlaceholder_other;
   return t.namePlaceholder_car;
+}
+
+function defaultModeForType(_type: AssetType): ScheduleMode {
+  return 'none';
 }
 
 export function AddEditAssetScreen({ navigation, route }: Props) {
@@ -48,11 +58,12 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   );
   const [purchaseAt, setPurchaseAt] = useState(existing?.purchaseAt ?? '');
   const [condition, setCondition] = useState<ConditionStatus>(existing?.condition ?? 'working');
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() =>
+    existing ? scheduleModeFromAsset(existing, initialType) : defaultModeForType(initialType)
+  );
   const [nextServiceAt, setNextServiceAt] = useState(
     existing?.nextServiceAt ?? addDaysIso(todayIso(), typeDefault.days)
   );
-  const [scheduleByDate, setScheduleByDate] = useState(existing?.scheduleByDate ?? true);
-  const [usageEnabled, setUsageEnabled] = useState(existing?.usageEnabled ?? !!typeDefault.km);
   const [usageCurrent, setUsageCurrent] = useState(
     existing?.usageCurrent != null ? String(existing.usageCurrent) : ''
   );
@@ -64,7 +75,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   );
 
   const kmCapable = DEFAULT_INTERVALS[type]?.km != null;
-  const tracksDate = !kmCapable || scheduleByDate;
+  const { scheduleByDate, usageEnabled } = scheduleModeToFlags(scheduleMode, kmCapable);
 
   const brandOptions = useMemo(() => {
     const fromKind = BRANDS_BY_TYPE[type] ?? [];
@@ -89,17 +100,19 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   };
 
   const canSave = useMemo(() => {
-    const hasTracker = tracksDate || usageEnabled;
-    const intervalOk = !usageEnabled || (parseNumber(usageInterval) != null && parseNumber(usageInterval)! > 0);
-    return (
-      hasTracker &&
+    const base =
       name.trim().length > 0 &&
       brand.trim().length > 0 &&
       model.trim().length > 0 &&
       yearOk(manufactureYear) &&
-      yearOk(purchaseYear) &&
-      (!tracksDate || /^\d{4}-\d{2}-\d{2}$/.test(nextServiceAt)) &&
-      intervalOk
+      yearOk(purchaseYear);
+    if (!base) return false;
+    if (scheduleMode === 'none') return true;
+    const intervalOk =
+      !usageEnabled || (parseNumber(usageInterval) != null && parseNumber(usageInterval)! > 0);
+    return (
+      intervalOk &&
+      (!scheduleByDate || /^\d{4}-\d{2}-\d{2}$/.test(nextServiceAt))
     );
   }, [
     name,
@@ -107,9 +120,10 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
     model,
     manufactureYear,
     purchaseYear,
-    nextServiceAt,
-    tracksDate,
+    scheduleMode,
+    scheduleByDate,
     usageEnabled,
+    nextServiceAt,
     usageInterval,
   ]);
 
@@ -117,19 +131,18 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
     setType(next);
     if (!existing) {
       const d = DEFAULT_INTERVALS[next];
+      setScheduleMode('none');
       setNextServiceAt(addDaysIso(todayIso(), d.days));
-      if (d.km) {
-        setScheduleByDate(true);
-        setUsageEnabled(true);
-        setUsageInterval(String(d.km));
-      } else {
-        setScheduleByDate(true);
-        setUsageEnabled(false);
-      }
+      if (d.km) setUsageInterval(String(d.km));
+    } else if (scheduleMode === 'both' && !DEFAULT_INTERVALS[next]?.km) {
+      setScheduleMode('date');
+    } else if (scheduleMode === 'km' && !DEFAULT_INTERVALS[next]?.km) {
+      setScheduleMode('date');
     }
   };
 
   const onSave = () => {
+    const flags = scheduleModeToFlags(scheduleMode, kmCapable);
     const id = upsertAsset({
       id: existing?.id,
       name: name.trim(),
@@ -141,11 +154,11 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       purchaseAt: purchaseAt.trim(),
       condition,
       nextServiceAt,
-      scheduleByDate: kmCapable ? scheduleByDate : true,
-      usageEnabled,
-      usageCurrent: usageEnabled ? parseNumber(usageCurrent) : null,
-      usageInterval: usageEnabled ? parseNumber(usageInterval) : null,
-      usageNextDue: usageEnabled ? parseNumber(usageNextDue) : null,
+      scheduleByDate: flags.scheduleByDate,
+      usageEnabled: flags.usageEnabled,
+      usageCurrent: flags.usageEnabled ? parseNumber(usageCurrent) : null,
+      usageInterval: flags.usageEnabled ? parseNumber(usageInterval) : null,
+      usageNextDue: flags.usageEnabled ? parseNumber(usageNextDue) : null,
       location: existing?.location ?? 'home',
     });
     navigation.replace('AssetDetail', { assetId: id });
@@ -212,20 +225,9 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       <Text style={styles.label}>{t.condition}</Text>
       <ConditionPicker value={condition} onChange={setCondition} t={t} />
 
-      {kmCapable ? (
-        <>
-          <View style={styles.switchRow}>
-            <Text style={styles.labelInline}>{t.enableDate}</Text>
-            <Switch value={scheduleByDate} onValueChange={setScheduleByDate} />
-          </View>
-          <View style={styles.switchRow}>
-            <Text style={styles.labelInline}>{t.enableKm}</Text>
-            <Switch value={usageEnabled} onValueChange={setUsageEnabled} />
-          </View>
-        </>
-      ) : null}
+      <ScheduleModePicker type={type} value={scheduleMode} onChange={setScheduleMode} t={t} />
 
-      {tracksDate ? (
+      {scheduleByDate ? (
         <DateField label={t.nextDue} value={nextServiceAt} onChange={setNextServiceAt} required />
       ) : null}
 
@@ -293,13 +295,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  labelInline: { fontSize: 16, color: colors.text },
   yearHint: { marginTop: spacing.md, fontSize: 13, color: colors.muted, lineHeight: 18 },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.lg,
-  },
   actions: { marginTop: spacing.xl, gap: 10 },
 });

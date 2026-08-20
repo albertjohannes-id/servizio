@@ -14,7 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { brandModelLine, formatInt, formatKm, yearLine } from '../domain/format';
 import { TYPE_IMAGES } from '../data/typeImages';
-import { formatDate, formatDateTime, maintenanceSummary, resolveServiceStatus } from '../domain/status';
+import { formatDate, formatDateTime, isScheduleTracked, maintenanceSummary, resolveServiceStatus } from '../domain/status';
 import { AssetChange, ChangeField, ServiceLog } from '../domain/types';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -113,6 +113,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   const changes = changesFor(asset.id);
   const maint = maintenanceSummary(asset, t, state.language);
   const dueNote = maint.primary;
+  const untracked = !isScheduleTracked(asset);
 
   const confirmRestore = () => {
     const body = t.restoreConfirmBody.replace('{name}', asset.name);
@@ -170,11 +171,23 @@ export function AssetDetailScreen({ navigation, route }: Props) {
             <Text style={styles.spec}>{formatKm(asset.usageCurrent, state.language)}</Text>
           ) : null}
           <Text style={styles.due}>
-            {t[service]} · {dueNote}
-            {asset.location === 'service_center' ? ` · ${t.locationServiceCenter}` : ''}
+            {untracked
+              ? dueNote
+              : `${t[service]} · ${dueNote}${asset.location === 'service_center' ? ` · ${t.locationServiceCenter}` : ''}`}
           </Text>
         </View>
       </View>
+
+      {!asset.archived && untracked ? (
+        <View style={styles.scheduleBanner}>
+          <Text style={styles.scheduleBannerText}>{t.untrackedBanner}</Text>
+          <PrimaryButton
+            label={t.addSchedule}
+            variant="ghost"
+            onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })}
+          />
+        </View>
+      ) : null}
 
       {asset.archived ? (
         <View style={styles.actions}>
@@ -408,6 +421,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8E6E0',
   },
   bannerText: { fontSize: 13, color: colors.muted, lineHeight: 18 },
+  scheduleBanner: {
+    marginTop: spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    gap: 10,
+  },
+  scheduleBannerText: { fontSize: 14, color: colors.text, lineHeight: 20 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
   heroImage: { width: 88, height: 88 },
   heroCopy: { flex: 1 },

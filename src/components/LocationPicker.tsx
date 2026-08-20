@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cardOn: { borderColor: colors.text, backgroundColor: '#E8E6E0' },
-  icon: { width: 32, height: 32 },
+  icon: { width: 32, height: 32, backgroundColor: 'transparent' },
   copy: { flex: 1, minWidth: 0 },
   title: { fontSize: 13, fontWeight: '600', color: colors.text },
   titleOn: { color: colors.text },

@@ -12,10 +12,10 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
   - **Schedule** — On Schedule / Due Soon / Overdue (from next-service date and/or km).
   - **Location** — Home / Service Center (where it is). Logging a service sets location back to Home.
 - Due Soon: 14 days or ~10% of km interval left.
-- **Schedule tracking per asset:**
-  - `scheduleByDate` (default true) — time-based next service date.
-  - `usageEnabled` — km-based interval + next km due.
-  - Car / motorcycle / bike can enable **both** toggles on Add/Edit asset.
+- **Schedule tracking per asset** (`ScheduleModePicker` on add/edit):
+  - **By date** / **By km** / **Date and km** / **Not yet** (no reminders; neutral tile on home).
+  - New assets default to **Not yet**.
+  - Untracked assets: banner on detail with **Add schedule**; first **routine log service** can set up reminders inline.
 - **Log service** — single manual form (no service-tag path, no OCR):
   - Service date (required), **routine vs one-off** (`serviceKind`: `routine` | `one_time`).
   - Routine: updates next due date and/or next km depending on asset setup; one-off does not change schedule.
@@ -63,8 +63,7 @@ src/data/               persistence, contexts, image pick, notifications, PIN
 src/domain/             types, status math, number/date format
 src/screens/            Setup, Unlock, Home, Account, AddEditAsset, AssetDetail,
                         LogService, LogKm, ArchivedAssets, Debug
-src/components/         shared UI (PrimaryButton, AssetTile, FieldLabel, TappablePhoto,
-                        ServiceKindPicker, MonthQuickPick, LocationPicker, PinPad, …)
+src/components/         … ScheduleModePicker, FieldLabel, TappablePhoto, …
 src/i18n/strings.ts     EN + ID (keep keys in sync)
 ```
 

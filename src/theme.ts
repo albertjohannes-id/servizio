@@ -13,6 +13,7 @@ export const colors = {
   tileOverdue: '#F3D4CB',
   tileDueSoon: '#F4E2BE',
   tileOnTrack: '#D5EBDA',
+  tileUntracked: '#E8E6E0',
   tileInService: '#E6E2DA',
 };
 

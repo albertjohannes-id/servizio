@@ -11,6 +11,7 @@ import { AssetDetailScreen } from '../screens/AssetDetailScreen';
 import { DebugMetricsScreen } from '../screens/DebugMetricsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LogServiceScreen } from '../screens/LogServiceScreen';
+import { LogKmScreen } from '../screens/LogKmScreen';
 import { SetupScreen } from '../screens/SetupScreen';
 import { UnlockScreen } from '../screens/UnlockScreen';
 import { dictionaries } from '../i18n/strings';
@@ -56,6 +57,7 @@ export function RootNavigator() {
             <Stack.Screen name="AddEditAsset" component={AddEditAssetScreen} options={{ title: '' }} />
             <Stack.Screen name="AssetDetail" component={AssetDetailScreen} options={{ title: '' }} />
             <Stack.Screen name="LogService" component={LogServiceScreen} options={{ title: '' }} />
+            <Stack.Screen name="LogKm" component={LogKmScreen} options={{ title: '' }} />
             <Stack.Screen name="DebugMetrics" component={DebugMetricsScreen} options={{ title: t.debug }} />
           </>
         ) : gate === 'locked' ? (

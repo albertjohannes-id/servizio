@@ -2,13 +2,15 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAssets } from '../data/AssetContext';
 import { dictionaries } from '../i18n/strings';
-import { colors, spacing } from '../theme';
+import { FieldLabel } from './FieldLabel';
+import { colors } from '../theme';
 
 type Props = {
   label: string;
   value: string;
   onChange: (year: string) => void;
   placeholder?: string;
+  required?: boolean;
 };
 
 function years(): string[] {
@@ -18,7 +20,7 @@ function years(): string[] {
   return list;
 }
 
-export function YearPicker({ label, value, onChange, placeholder }: Props) {
+export function YearPicker({ label, value, onChange, placeholder, required }: Props) {
   const { state } = useAssets();
   const t = dictionaries[state.language];
   const [open, setOpen] = useState(false);
@@ -26,7 +28,7 @@ export function YearPicker({ label, value, onChange, placeholder }: Props) {
 
   return (
     <View>
-      <Text style={styles.label}>{label}</Text>
+      <FieldLabel label={label} required={required} />
       <Pressable
         onPress={() => setOpen((v) => !v)}
         style={styles.box}
@@ -66,14 +68,6 @@ export function YearPicker({ label, value, onChange, placeholder }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: {
-    marginTop: spacing.md,
-    marginBottom: 8,
-    fontSize: 12,
-    color: colors.muted,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
   box: {
     borderWidth: 1,
     borderColor: colors.line,

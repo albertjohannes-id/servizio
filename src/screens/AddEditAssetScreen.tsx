@@ -34,9 +34,10 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   const t = dictionaries[state.language];
   const existing = state.assets.find((a) => a.id === route.params?.assetId);
 
-  const defaults = DEFAULT_INTERVALS.car;
+  const initialType = existing?.type ?? 'car';
+  const typeDefault = DEFAULT_INTERVALS[initialType];
   const [name, setName] = useState(existing?.name ?? '');
-  const [type, setType] = useState<AssetType>(existing?.type ?? 'car');
+  const [type, setType] = useState<AssetType>(initialType);
   const [brand, setBrand] = useState(existing?.brand ?? '');
   const [model, setModel] = useState(existing?.model ?? '');
   const [manufactureYear, setManufactureYear] = useState(
@@ -48,18 +49,22 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   const [purchaseAt, setPurchaseAt] = useState(existing?.purchaseAt ?? '');
   const [condition, setCondition] = useState<ConditionStatus>(existing?.condition ?? 'working');
   const [nextServiceAt, setNextServiceAt] = useState(
-    existing?.nextServiceAt ?? addDaysIso(todayIso(), defaults.days)
+    existing?.nextServiceAt ?? addDaysIso(todayIso(), typeDefault.days)
   );
-  const [usageEnabled, setUsageEnabled] = useState(existing?.usageEnabled ?? false);
+  const [scheduleByDate, setScheduleByDate] = useState(existing?.scheduleByDate ?? true);
+  const [usageEnabled, setUsageEnabled] = useState(existing?.usageEnabled ?? !!typeDefault.km);
   const [usageCurrent, setUsageCurrent] = useState(
     existing?.usageCurrent != null ? String(existing.usageCurrent) : ''
   );
   const [usageInterval, setUsageInterval] = useState(
-    existing?.usageInterval != null ? String(existing.usageInterval) : '5000'
+    existing?.usageInterval != null ? String(existing.usageInterval) : String(typeDefault.km ?? '5000')
   );
   const [usageNextDue, setUsageNextDue] = useState(
     existing?.usageNextDue != null ? String(existing.usageNextDue) : ''
   );
+
+  const kmCapable = DEFAULT_INTERVALS[type]?.km != null;
+  const tracksDate = !kmCapable || scheduleByDate;
 
   const brandOptions = useMemo(() => {
     const fromKind = BRANDS_BY_TYPE[type] ?? [];
@@ -83,16 +88,30 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
     return n != null && n >= 1980 && n <= max;
   };
 
-  const canSave = useMemo(
-    () =>
+  const canSave = useMemo(() => {
+    const hasTracker = tracksDate || usageEnabled;
+    const intervalOk = !usageEnabled || (parseNumber(usageInterval) != null && parseNumber(usageInterval)! > 0);
+    return (
+      hasTracker &&
       name.trim().length > 0 &&
       brand.trim().length > 0 &&
       model.trim().length > 0 &&
       yearOk(manufactureYear) &&
       yearOk(purchaseYear) &&
-      /^\d{4}-\d{2}-\d{2}$/.test(nextServiceAt),
-    [name, brand, model, manufactureYear, purchaseYear, nextServiceAt]
-  );
+      (!tracksDate || /^\d{4}-\d{2}-\d{2}$/.test(nextServiceAt)) &&
+      intervalOk
+    );
+  }, [
+    name,
+    brand,
+    model,
+    manufactureYear,
+    purchaseYear,
+    nextServiceAt,
+    tracksDate,
+    usageEnabled,
+    usageInterval,
+  ]);
 
   const onTypeChange = (next: AssetType) => {
     setType(next);
@@ -100,9 +119,11 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       const d = DEFAULT_INTERVALS[next];
       setNextServiceAt(addDaysIso(todayIso(), d.days));
       if (d.km) {
+        setScheduleByDate(true);
         setUsageEnabled(true);
         setUsageInterval(String(d.km));
       } else {
+        setScheduleByDate(true);
         setUsageEnabled(false);
       }
     }
@@ -120,6 +141,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       purchaseAt: purchaseAt.trim(),
       condition,
       nextServiceAt,
+      scheduleByDate: kmCapable ? scheduleByDate : true,
       usageEnabled,
       usageCurrent: usageEnabled ? parseNumber(usageCurrent) : null,
       usageInterval: usageEnabled ? parseNumber(usageInterval) : null,
@@ -131,11 +153,14 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.requiredHint}>{t.requiredHint}</Text>
+
       <Text style={styles.label}>{t.kind}</Text>
       <TypePicker value={type} onChange={onTypeChange} t={t} />
 
       <TextField
         label={t.name}
+        required
         value={name}
         onChangeText={setName}
         placeholder={namePlaceholderFor(type, t)}
@@ -143,6 +168,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
 
       <SuggestField
         label={t.brand}
+        required
         value={brand}
         onChange={setBrand}
         options={brandOptions}
@@ -152,6 +178,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       />
       <TextField
         label={t.model}
+        required
         value={model}
         onChangeText={setModel}
         placeholder={t.modelPlaceholder}
@@ -185,12 +212,22 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       <Text style={styles.label}>{t.condition}</Text>
       <ConditionPicker value={condition} onChange={setCondition} t={t} />
 
-      <DateField label={t.nextDue} value={nextServiceAt} onChange={setNextServiceAt} />
+      {kmCapable ? (
+        <>
+          <View style={styles.switchRow}>
+            <Text style={styles.labelInline}>{t.enableDate}</Text>
+            <Switch value={scheduleByDate} onValueChange={setScheduleByDate} />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.labelInline}>{t.enableKm}</Text>
+            <Switch value={usageEnabled} onValueChange={setUsageEnabled} />
+          </View>
+        </>
+      ) : null}
 
-      <View style={styles.switchRow}>
-        <Text style={styles.labelInline}>{t.enableKm}</Text>
-        <Switch value={usageEnabled} onValueChange={setUsageEnabled} />
-      </View>
+      {tracksDate ? (
+        <DateField label={t.nextDue} value={nextServiceAt} onChange={setNextServiceAt} required />
+      ) : null}
 
       {usageEnabled ? (
         <>
@@ -205,6 +242,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
             lang={state.language}
             value={usageInterval}
             onChangeDigits={setUsageInterval}
+            required
           />
           <NumberField
             label={t.nextKmDue}
@@ -246,6 +284,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+  requiredHint: { marginTop: 8, marginBottom: 4, fontSize: 12, color: colors.muted },
   label: {
     marginTop: spacing.lg,
     marginBottom: 6,

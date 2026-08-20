@@ -27,6 +27,8 @@ export interface Asset {
   /** Where the asset is right now */
   location: AssetLocation;
   nextServiceAt: string; // YYYY-MM-DD
+  /** When false, schedule status ignores nextServiceAt (km-only assets). Default true. */
+  scheduleByDate: boolean;
   usageEnabled: boolean;
   usageCurrent: number | null;
   usageInterval: number | null;
@@ -36,10 +38,13 @@ export interface Asset {
   updatedAt: string;
 }
 
+export type ServiceLogKind = 'routine' | 'one_time';
+
 export interface ServiceLog {
   id: string;
   assetId: string;
   servicedAt: string;
+  serviceKind: ServiceLogKind;
   notes: string;
   cost: number | null;
   receiptUri: string | null;
@@ -62,6 +67,7 @@ export type ChangeField =
   | 'usageNextDue'
   | 'usageInterval'
   | 'usageEnabled'
+  | 'scheduleByDate'
   | 'location'
   | 'in_service';
 

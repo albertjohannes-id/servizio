@@ -1,16 +1,18 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors, spacing } from '../theme';
+import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
+import { FieldLabel } from './FieldLabel';
+import { colors } from '../theme';
 
 type Props = TextInputProps & {
   label?: string;
+  required?: boolean;
 };
 
 /** Bordered field with inset text so values never sit flush on the box. */
-export function TextField({ label, style, multiline, ...rest }: Props) {
+export function TextField({ label, required, style, multiline, ...rest }: Props) {
   return (
     <View>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <FieldLabel label={label} required={required} /> : null}
       <View style={[styles.box, multiline && styles.boxMulti]}>
         <TextInput
           {...rest}
@@ -24,14 +26,6 @@ export function TextField({ label, style, multiline, ...rest }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: {
-    marginTop: spacing.md,
-    marginBottom: 8,
-    fontSize: 12,
-    color: colors.muted,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
   box: {
     borderWidth: 1,
     borderColor: colors.line,

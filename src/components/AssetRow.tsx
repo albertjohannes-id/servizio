@@ -2,22 +2,10 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TYPE_IMAGES } from '../data/typeImages';
 import { Asset } from '../domain/types';
-import { brandModelLine, formatInt, formatKm, yearLine } from '../domain/format';
-import { daysUntil, formatDate, resolveServiceStatus } from '../domain/status';
+import { brandModelLine, formatKm, yearLine } from '../domain/format';
+import { maintenanceTileDisplay } from '../domain/status';
 import { Dictionary, Lang } from '../i18n/strings';
 import { colors, spacing } from '../theme';
-
-function dueLine(asset: Asset, t: Dictionary, lang: Lang): { text: string; color: string } {
-  const service = resolveServiceStatus(asset);
-  const days = daysUntil(asset.nextServiceAt);
-  if (service === 'overdue') {
-    return { text: t.daysLate.replace('{n}', formatInt(Math.abs(days), lang)), color: colors.danger };
-  }
-  if (service === 'due_soon') {
-    return { text: t.dueInDays.replace('{n}', formatInt(Math.max(days, 0), lang)), color: colors.warn };
-  }
-  return { text: formatDate(asset.nextServiceAt), color: colors.muted };
-}
 
 export function AssetRow({
   asset,
@@ -30,7 +18,7 @@ export function AssetRow({
   lang: Lang;
   onPress: () => void;
 }) {
-  const due = dueLine(asset, t, lang);
+  const lines = maintenanceTileDisplay(asset, t, lang, false);
   const spec = brandModelLine(asset);
   const years = yearLine(asset);
   const km =
@@ -53,7 +41,17 @@ export function AssetRow({
           {km}
         </Text>
       </View>
-      <Text style={[styles.due, { color: due.color }]}>{due.text}</Text>
+      <View style={styles.dueCol}>
+        {lines.length === 0 ? (
+          <Text style={[styles.due, { color: colors.muted }]}>{t.noSchedule}</Text>
+        ) : (
+          lines.map((line, i) => (
+            <Text key={i} style={styles.due} numberOfLines={2}>
+              {line}
+            </Text>
+          ))
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -72,5 +70,6 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   name: { fontSize: 17, color: colors.text, fontWeight: '500' },
   meta: { fontSize: 13, color: colors.muted, marginTop: 3 },
-  due: { fontSize: 13, fontWeight: '500' },
+  dueCol: { alignItems: 'flex-end', maxWidth: '36%', gap: 2 },
+  due: { fontSize: 12, fontWeight: '500', textAlign: 'right', color: colors.muted },
 });

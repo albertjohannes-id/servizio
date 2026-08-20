@@ -12,13 +12,13 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
-import { brandModelLine, formatInt, formatKm, parseNumber, yearLine } from '../domain/format';
+import { brandModelLine, formatInt, formatKm, yearLine } from '../domain/format';
 import { TYPE_IMAGES } from '../data/typeImages';
-import { daysUntil, formatDate, formatDateTime, resolveServiceStatus } from '../domain/status';
+import { formatDate, formatDateTime, maintenanceSummary, resolveServiceStatus } from '../domain/status';
 import { AssetChange, ChangeField, ServiceLog } from '../domain/types';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { NumberField } from '../components/NumberField';
+import { TappablePhoto } from '../components/TappablePhoto';
 import { ConditionPicker } from '../components/ConditionPicker';
 import { LocationPicker } from '../components/LocationPicker';
 import { RootStackParamList } from '../navigation/types';
@@ -39,6 +39,7 @@ const FIELD_LABEL: Record<ChangeField, keyof Dictionary> = {
   usageNextDue: 'fieldUsageNextDue',
   usageInterval: 'fieldUsageInterval',
   usageEnabled: 'fieldUsageEnabled',
+  scheduleByDate: 'fieldScheduleByDate',
   location: 'fieldLocation',
   in_service: 'fieldLocation',
 };
@@ -66,7 +67,7 @@ function formatChangeValue(
     return t[value];
   }
   if (field === 'nextServiceAt' && typeof value === 'string') return formatDate(value);
-  if (field === 'usageEnabled') return value ? t.valueOn : t.valueOff;
+  if (field === 'usageEnabled' || field === 'scheduleByDate') return value ? t.valueOn : t.valueOff;
   if (field === 'location' || field === 'in_service') {
     if (value === 'service_center' || value === 'in_service') return t.locationServiceCenter;
     return t.locationHome;
@@ -79,7 +80,6 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     state,
     setCondition,
     setLocation,
-    updateUsage,
     restoreAsset,
     permanentlyDeleteAsset,
     logsFor,
@@ -87,9 +87,6 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   } = useAssets();
   const t = dictionaries[state.language];
   const asset = state.assets.find((a) => a.id === route.params.assetId);
-  const [kmDraft, setKmDraft] = useState(
-    asset?.usageCurrent != null ? String(asset.usageCurrent) : ''
-  );
   const [tab, setTab] = useState<HistoryTab>('service');
   const [savedVisible, setSavedVisible] = useState(!!route.params.showSaved);
   const [openLog, setOpenLog] = useState<ServiceLog | null>(null);
@@ -114,13 +111,8 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   const service = resolveServiceStatus(asset);
   const logs = logsFor(asset.id);
   const changes = changesFor(asset.id);
-  const days = daysUntil(asset.nextServiceAt);
-  const dueNote =
-    service === 'overdue'
-      ? t.daysLate.replace('{n}', formatInt(Math.abs(days), state.language))
-      : service === 'due_soon'
-        ? t.dueInDays.replace('{n}', formatInt(Math.max(days, 0), state.language))
-        : formatDate(asset.nextServiceAt);
+  const maint = maintenanceSummary(asset, t, state.language);
+  const dueNote = maint.primary;
 
   const confirmRestore = () => {
     const body = t.restoreConfirmBody.replace('{name}', asset.name);
@@ -174,6 +166,9 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           <Text style={styles.title}>{asset.name}</Text>
           {brandModelLine(asset) ? <Text style={styles.spec}>{brandModelLine(asset)}</Text> : null}
           {yearLine(asset) ? <Text style={styles.spec}>{yearLine(asset)}</Text> : null}
+          {asset.usageEnabled && asset.usageCurrent != null ? (
+            <Text style={styles.spec}>{formatKm(asset.usageCurrent, state.language)}</Text>
+          ) : null}
           <Text style={styles.due}>
             {t[service]} · {dueNote}
             {asset.location === 'service_center' ? ` · ${t.locationServiceCenter}` : ''}
@@ -194,36 +189,18 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           <Text style={styles.label}>{t.location}</Text>
           <LocationPicker value={asset.location} onChange={(next) => setLocation(asset.id, next)} t={t} />
 
-          {asset.usageEnabled ? (
-            <View style={styles.block}>
-              <Text style={styles.label}>{t.currentKm}</Text>
-              <View style={styles.kmRow}>
-                <View style={styles.kmField}>
-                  <NumberField lang={state.language} value={kmDraft} onChangeDigits={setKmDraft} />
-                </View>
-                <PrimaryButton
-                  label={t.updateKm}
-                  variant="ghost"
-                  onPress={() => {
-                    const n = parseNumber(kmDraft);
-                    if (n == null) {
-                      Alert.alert('Invalid km');
-                      return;
-                    }
-                    if (asset.usageCurrent === n) return;
-                    updateUsage(asset.id, n);
-                    setTab('changes');
-                  }}
-                />
-              </View>
-            </View>
-          ) : null}
-
           <View style={styles.actions}>
             <PrimaryButton
               label={t.logServiceNow}
               onPress={() => navigation.navigate('LogService', { assetId: asset.id })}
             />
+            {asset.usageEnabled ? (
+              <PrimaryButton
+                label={t.logKm}
+                variant="ghost"
+                onPress={() => navigation.navigate('LogKm', { assetId: asset.id })}
+              />
+            ) : null}
             <PrimaryButton
               label={t.edit}
               variant="ghost"
@@ -271,6 +248,9 @@ export function AssetDetailScreen({ navigation, route }: Props) {
                 ) : null}
               </View>
               {log.vendorName ? <Text style={styles.cardSub}>{log.vendorName}</Text> : null}
+              <Text style={styles.cardSub}>
+                {log.serviceKind === 'one_time' ? t.serviceKindOneTime : t.serviceKindRoutine}
+              </Text>
               {log.notes ? (
                 <Text style={styles.cardNotes} numberOfLines={2}>
                   {log.notes}
@@ -334,6 +314,10 @@ export function AssetDetailScreen({ navigation, route }: Props) {
                 <Text style={styles.sheetKicker}>{t.serviceDate}</Text>
                 <Text style={styles.sheetTitle}>{formatDate(openLog.servicedAt)}</Text>
                 <View style={styles.sheetBlock}>
+                  <DetailRow
+                    label={t.serviceKind}
+                    value={openLog.serviceKind === 'one_time' ? t.serviceKindOneTime : t.serviceKindRoutine}
+                  />
                   <DetailRow label={t.vendor} value={openLog.vendorName} />
                   <DetailRow
                     label={t.costShort}
@@ -345,13 +329,13 @@ export function AssetDetailScreen({ navigation, route }: Props) {
                 {openLog.receiptUri ? (
                   <View style={styles.photoBlock}>
                     <Text style={styles.detailLabel}>{t.receipt}</Text>
-                    <Image source={{ uri: openLog.receiptUri }} style={styles.sheetPhoto} />
+                    <TappablePhoto uri={openLog.receiptUri} style={styles.sheetPhoto} accessibilityLabel={t.receipt} />
                   </View>
                 ) : null}
                 {openLog.serviceTagUri ? (
                   <View style={styles.photoBlock}>
                     <Text style={styles.detailLabel}>{t.serviceTag}</Text>
-                    <Image source={{ uri: openLog.serviceTagUri }} style={styles.sheetPhoto} />
+                    <TappablePhoto uri={openLog.serviceTagUri} style={styles.sheetPhoto} accessibilityLabel={t.serviceTag} />
                   </View>
                 ) : null}
                 <PrimaryButton
@@ -439,9 +423,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  block: { marginTop: spacing.sm },
-  kmRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  kmField: { flex: 1 },
   actions: { marginTop: spacing.lg, gap: 10 },
   tabs: {
     flexDirection: 'row',

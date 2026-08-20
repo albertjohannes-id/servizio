@@ -2,8 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TYPE_IMAGES } from '../data/typeImages';
 import { Asset, ServiceStatus } from '../domain/types';
-import { formatInt } from '../domain/format';
-import { daysUntil, formatDate, resolveServiceStatus } from '../domain/status';
+import { maintenanceTileDisplay, resolveServiceStatus } from '../domain/status';
 import { Dictionary, Lang } from '../i18n/strings';
 import { colors } from '../theme';
 
@@ -11,14 +10,6 @@ function tileFill(status: ServiceStatus): string {
   if (status === 'overdue') return colors.tileOverdue;
   if (status === 'due_soon') return colors.tileDueSoon;
   return colors.tileOnTrack;
-}
-
-function dueLine(asset: Asset, t: Dictionary, lang: Lang): string {
-  const service = resolveServiceStatus(asset);
-  const days = daysUntil(asset.nextServiceAt);
-  if (service === 'overdue') return t.daysLate.replace('{n}', formatInt(Math.abs(days), lang));
-  if (service === 'due_soon') return t.dueInDays.replace('{n}', formatInt(Math.max(days, 0), lang));
-  return formatDate(asset.nextServiceAt);
 }
 
 export function AssetTile({
@@ -37,6 +28,7 @@ export function AssetTile({
   onPress: () => void;
 }) {
   const status = resolveServiceStatus(asset);
+  const displayLines = maintenanceTileDisplay(asset, t, lang, !!compact);
   const icon = compact ? 28 : 64;
   const pad = compact ? 8 : 12;
 
@@ -44,7 +36,7 @@ export function AssetTile({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={asset.name}
+      accessibilityLabel={`${asset.name}. ${displayLines.join('. ')}`}
       style={({ pressed }) => [
         styles.tile,
         {
@@ -85,9 +77,21 @@ export function AssetTile({
             {t[asset.type]}
           </Text>
         )}
-        <Text style={[styles.due, compact && styles.dueCompact]} numberOfLines={1}>
-          {dueLine(asset, t, lang)}
-        </Text>
+        {displayLines.length === 0 ? (
+          <Text style={[styles.due, compact && styles.dueCompact]} numberOfLines={1}>
+            {t.noSchedule}
+          </Text>
+        ) : (
+          displayLines.map((line, i) => (
+            <Text
+              key={i}
+              style={[styles.due, compact && styles.dueCompact, i > 0 && styles.dueSecondary]}
+              numberOfLines={compact ? 1 : 2}
+            >
+              {line}
+            </Text>
+          ))
+        )}
       </View>
     </Pressable>
   );
@@ -113,7 +117,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 8,
   },
-  badgeCompact: { fontSize: 9, paddingHorizontal: 4, paddingVertical: 2 },
   badgeIcon: { width: 22, height: 22 },
   body: { gap: 2 },
   name: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
@@ -121,4 +124,5 @@ const styles = StyleSheet.create({
   kind: { fontSize: 12, color: colors.muted },
   due: { marginTop: 2, fontSize: 12, fontWeight: '500', color: colors.text },
   dueCompact: { fontSize: 11, marginTop: 0 },
+  dueSecondary: { fontSize: 11, fontWeight: '400', color: colors.muted, marginTop: 0 },
 });

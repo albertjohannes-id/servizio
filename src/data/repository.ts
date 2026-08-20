@@ -48,6 +48,7 @@ export function normalizeAsset(
     manufactureYear: a.manufactureYear ?? null,
     purchaseYear: a.purchaseYear ?? null,
     purchaseAt: a.purchaseAt ?? '',
+    scheduleByDate: a.scheduleByDate !== false,
     location,
   };
 }
@@ -69,6 +70,7 @@ export async function loadState(): Promise<AppState> {
       logs: (parsed.logs ?? []).map((log) => ({
         ...log,
         serviceTagUri: log.serviceTagUri ?? null,
+        serviceKind: log.serviceKind === 'one_time' ? 'one_time' : 'routine',
       })),
       assets: (parsed.assets ?? []).map((a) =>
         normalizeAsset(a as Asset & { serviceOverride?: 'in_service' | null })

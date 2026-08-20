@@ -3,12 +3,14 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDate, todayIso } from '../domain/status';
 import { dictionaries } from '../i18n/strings';
 import { useAssets } from '../data/AssetContext';
-import { colors, spacing } from '../theme';
+import { FieldLabel } from './FieldLabel';
+import { colors } from '../theme';
 
 type Props = {
   label: string;
   value: string;
   onChange: (isoDate: string) => void;
+  required?: boolean;
 };
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -42,7 +44,7 @@ function buildCells(cursor: Date): (number | null)[] {
   return cells;
 }
 
-export function DateField({ label, value, onChange }: Props) {
+export function DateField({ label, value, onChange, required }: Props) {
   const { state } = useAssets();
   const t = dictionaries[state.language];
   const [open, setOpen] = useState(false);
@@ -59,7 +61,7 @@ export function DateField({ label, value, onChange }: Props) {
 
   return (
     <View>
-      <Text style={styles.label}>{label}</Text>
+      <FieldLabel label={label} required={required} />
       <Pressable
         onPress={openPicker}
         style={styles.box}
@@ -134,14 +136,6 @@ export function DateField({ label, value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: {
-    marginTop: spacing.md,
-    marginBottom: 8,
-    fontSize: 12,
-    color: colors.muted,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
   box: {
     borderWidth: 1,
     borderColor: colors.line,

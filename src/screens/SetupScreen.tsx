@@ -112,6 +112,7 @@ export function SetupScreen() {
           <View style={styles.form}>
             <TextField
               label={t.email}
+              required
               value={setupEmail}
               onChangeText={setSetupEmail}
               autoCapitalize="none"

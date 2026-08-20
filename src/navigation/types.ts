@@ -7,5 +7,6 @@ export type RootStackParamList = {
   AddEditAsset: { assetId?: string } | undefined;
   AssetDetail: { assetId: string; showSaved?: boolean };
   LogService: { assetId: string };
+  LogKm: { assetId: string };
   DebugMetrics: undefined;
 };

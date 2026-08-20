@@ -15,6 +15,7 @@ import {
   ChangeField,
   ConditionStatus,
   ServiceLog,
+  ServiceLogKind,
   Vendor,
 } from '../domain/types';
 import { todayIso } from '../domain/status';
@@ -40,14 +41,15 @@ interface AssetContextValue {
   logService: (input: {
     assetId: string;
     servicedAt: string;
+    serviceKind: ServiceLogKind;
     notes: string;
     cost: number | null;
     receiptUri: string | null;
     serviceTagUri: string | null;
     vendorId: string | null;
     vendorName: string | null;
-    nextServiceAt: string;
-    usageNextDue: number | null;
+    nextServiceAt?: string;
+    usageNextDue?: number | null;
   }) => void;
   addVendor: (name: string) => Vendor;
   track: (eventType: string, payload?: Record<string, unknown>) => void;
@@ -147,6 +149,7 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
             makeChange(before.id, 'usageNextDue', before.usageNextDue, input.usageNextDue),
             makeChange(before.id, 'usageInterval', before.usageInterval, input.usageInterval),
             makeChange(before.id, 'usageEnabled', before.usageEnabled, input.usageEnabled),
+            makeChange(before.id, 'scheduleByDate', before.scheduleByDate, input.scheduleByDate),
             makeChange(before.id, 'location', before.location, input.location),
           ];
           for (const row of next) if (row) diffs.push(row);
@@ -181,6 +184,7 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
             condition: input.condition,
             location: input.location ?? 'home',
             nextServiceAt: input.nextServiceAt,
+            scheduleByDate: input.scheduleByDate,
             usageEnabled: input.usageEnabled,
             usageCurrent: input.usageCurrent,
             usageInterval: input.usageInterval,
@@ -269,6 +273,7 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
           id: nid('log'),
           assetId: input.assetId,
           servicedAt: input.servicedAt,
+          serviceKind: input.serviceKind,
           notes: input.notes,
           cost: input.cost,
           receiptUri: input.receiptUri,
@@ -280,22 +285,24 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
         mutate((prev) => ({
           ...prev,
           logs: [log, ...prev.logs],
-          assets: prev.assets.map((a) =>
-            a.id === input.assetId
-              ? {
-                  ...a,
-                  location: 'home',
-                  nextServiceAt: input.nextServiceAt,
-                  usageNextDue: input.usageNextDue,
-                  usageCurrent:
-                    a.usageEnabled && a.usageCurrent != null ? a.usageCurrent : a.usageCurrent,
-                  updatedAt: todayIso(),
-                }
-              : a
-          ),
+          assets: prev.assets.map((a) => {
+            if (a.id !== input.assetId) return a;
+            if (input.serviceKind !== 'routine') {
+              return { ...a, location: 'home', updatedAt: todayIso() };
+            }
+            const patch: Partial<Asset> = { location: 'home', updatedAt: todayIso() };
+            if (a.scheduleByDate !== false && input.nextServiceAt) {
+              patch.nextServiceAt = input.nextServiceAt;
+            }
+            if (a.usageEnabled && input.usageNextDue != null) {
+              patch.usageNextDue = input.usageNextDue;
+            }
+            return { ...a, ...patch };
+          }),
         }));
         track('service_logged', {
           assetId: input.assetId,
+          serviceKind: input.serviceKind,
           hasCost: input.cost != null,
           hasReceipt: !!input.receiptUri,
           hasServiceTag: !!input.serviceTagUri,

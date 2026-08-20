@@ -16,6 +16,7 @@ export function SuggestField({
   placeholder,
   t,
   addNamed,
+  required,
 }: {
   label: string;
   value: string;
@@ -24,6 +25,7 @@ export function SuggestField({
   placeholder: string;
   t: Dictionary;
   addNamed: string;
+  required?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const needle = norm(value);
@@ -40,6 +42,7 @@ export function SuggestField({
     <View>
       <TextField
         label={label}
+        required={required}
         value={value}
         onChangeText={(text) => {
           setOpen(true);

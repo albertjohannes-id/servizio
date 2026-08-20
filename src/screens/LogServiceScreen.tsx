@@ -1,14 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { pickImage } from '../data/pickImage';
 import { DEFAULT_INTERVALS } from '../data/seed';
 import { addDaysIso, todayIso } from '../domain/status';
+import { ServiceLogKind } from '../domain/types';
 import { dictionaries } from '../i18n/strings';
 import { formatInt, parseNumber } from '../domain/format';
 import { DateField } from '../components/DateField';
+import { MonthQuickPick } from '../components/MonthQuickPick';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { ServiceKindPicker } from '../components/ServiceKindPicker';
+import { TappablePhoto } from '../components/TappablePhoto';
 import { TextField } from '../components/TextField';
 import { NumberField } from '../components/NumberField';
 import { VendorPicker } from '../components/VendorPicker';
@@ -22,24 +26,38 @@ export function LogServiceScreen({ navigation, route }: Props) {
   const t = dictionaries[state.language];
   const asset = state.assets.find((a) => a.id === route.params.assetId);
 
-  const suggestedNext = useMemo(() => {
-    if (!asset) return todayIso();
-    const days = DEFAULT_INTERVALS[asset.type]?.days ?? 180;
-    return addDaysIso(todayIso(), days);
-  }, [asset]);
-
   const [servicedAt, setServicedAt] = useState(todayIso());
+  const [serviceKind, setServiceKind] = useState<ServiceLogKind>('routine');
   const [notes, setNotes] = useState('');
   const [cost, setCost] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [newVendor, setNewVendor] = useState('');
+
+  const suggestedNext = useMemo(() => {
+    if (!asset) return servicedAt;
+    const days = DEFAULT_INTERVALS[asset.type]?.days ?? 180;
+    return addDaysIso(servicedAt, days);
+  }, [asset, servicedAt]);
+
   const [nextServiceAt, setNextServiceAt] = useState(suggestedNext);
   const [usageNextDue, setUsageNextDue] = useState(
     asset?.usageEnabled && asset.usageCurrent != null && asset.usageInterval != null
       ? String(asset.usageCurrent + asset.usageInterval)
       : ''
   );
+
+  const tracksDate = asset?.scheduleByDate !== false;
+  const tracksKm = !!asset?.usageEnabled;
+  const showScheduleFields = serviceKind === 'routine';
+
+  const canSave = useMemo(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(servicedAt)) return false;
+    if (serviceKind !== 'routine') return true;
+    if (tracksDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextServiceAt)) return false;
+    if (tracksKm && parseNumber(usageNextDue) == null) return false;
+    return true;
+  }, [servicedAt, serviceKind, tracksDate, tracksKm, nextServiceAt, usageNextDue]);
 
   if (!asset) {
     return (
@@ -70,14 +88,16 @@ export function LogServiceScreen({ navigation, route }: Props) {
     logService({
       assetId: asset.id,
       servicedAt,
+      serviceKind,
       notes: notes.trim(),
       cost: parseNumber(cost),
       receiptUri,
       serviceTagUri: null,
       vendorId: vid,
       vendorName: vname,
-      nextServiceAt,
-      usageNextDue: asset.usageEnabled ? parseNumber(usageNextDue) ?? asset.usageNextDue : asset.usageNextDue,
+      nextServiceAt: showScheduleFields && tracksDate ? nextServiceAt : undefined,
+      usageNextDue:
+        showScheduleFields && tracksKm ? parseNumber(usageNextDue) ?? asset.usageNextDue : undefined,
     });
     navigation.navigate('AssetDetail', { assetId: asset.id, showSaved: true });
   };
@@ -86,16 +106,36 @@ export function LogServiceScreen({ navigation, route }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{t.logServiceNow}</Text>
       <Text style={styles.lead}>{asset.name}</Text>
+      <Text style={styles.requiredHint}>{t.requiredHint}</Text>
 
-      <DateField label={t.serviceDate} value={servicedAt} onChange={setServicedAt} />
-      <DateField label={t.nextDuePrompt} value={nextServiceAt} onChange={setNextServiceAt} />
+      <DateField label={t.serviceDate} value={servicedAt} onChange={setServicedAt} required />
 
-      {asset.usageEnabled ? (
+      <ServiceKindPicker value={serviceKind} onChange={setServiceKind} t={t} />
+
+      {showScheduleFields && tracksDate ? (
+        <View>
+          <DateField
+            label={t.nextDuePrompt}
+            value={nextServiceAt}
+            onChange={setNextServiceAt}
+            required
+          />
+          <MonthQuickPick
+            baseDate={servicedAt}
+            selected={nextServiceAt}
+            onSelect={setNextServiceAt}
+            t={t}
+          />
+        </View>
+      ) : null}
+
+      {showScheduleFields && tracksKm ? (
         <NumberField
           label={t.nextKmDue}
           lang={state.language}
           value={usageNextDue}
           onChangeDigits={setUsageNextDue}
+          required
         />
       ) : null}
 
@@ -117,7 +157,9 @@ export function LogServiceScreen({ navigation, route }: Props) {
             if (uri) setReceiptUri(uri);
           }}
         />
-        {receiptUri ? <Image source={{ uri: receiptUri }} style={styles.receipt} /> : null}
+        {receiptUri ? (
+          <TappablePhoto uri={receiptUri} style={styles.receipt} accessibilityLabel={t.receipt} />
+        ) : null}
       </View>
 
       <VendorPicker
@@ -130,7 +172,7 @@ export function LogServiceScreen({ navigation, route }: Props) {
       />
 
       <View style={styles.actions}>
-        <PrimaryButton label={t.save} onPress={onSave} />
+        <PrimaryButton label={t.save} onPress={onSave} disabled={!canSave} />
         <PrimaryButton label={t.cancel} variant="ghost" onPress={() => navigation.goBack()} />
       </View>
     </ScrollView>
@@ -144,7 +186,8 @@ const styles = StyleSheet.create({
   notFound: { fontSize: 16, color: colors.muted },
   title: { fontSize: 24, fontWeight: '500', color: colors.text, letterSpacing: -0.3 },
   lead: { marginTop: 6, marginBottom: 4, fontSize: 16, color: colors.muted },
+  requiredHint: { marginBottom: 4, fontSize: 12, color: colors.muted },
   block: { marginTop: spacing.md, marginBottom: spacing.sm },
-  receipt: { width: '100%', height: 140, marginTop: 8, backgroundColor: colors.border },
+  receipt: { marginTop: 8 },
   actions: { marginTop: spacing.lg, gap: 10 },
 });

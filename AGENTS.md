@@ -53,8 +53,8 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - Suggest/search lists (brand, vendor, purchase-at) open **only while the field is focused**. Purchase-at presets: Shopee, Tokopedia, Blibli, Lazada, Official Dealer, Secondhand.
 - Dates: compact in-app calendar (not full-screen). Years: dropdown.
 - Kind picker: 3-across, transparent 3D icons. Name placeholder follows kind.
-- Asset detail shows condition and location in a compact row; Edit is in the header. Reminders have a contextual Add schedule action. Log service and Log km stay in a bottom action bar.
-- Add/Edit Asset groups details, condition/location, and reminders; Cancel is in the header, Save is in a fixed bottom bar, and Archive asset is separated at the end of the form with confirmation.
+- Asset detail shows condition and location in a compact row; Edit with a pencil icon is in the header. Reminders have a contextual Add schedule action. Log service and Log km stay in a bottom action bar.
+- Add/Edit Asset groups details, condition/location, and reminders; the standard back arrow discards unsaved edits, Save is in a fixed bottom bar, and Archive asset is separated at the end of the form with confirmation.
 - Add/Edit Asset: condition and reminders use dropdowns. Location picker: Home / Service Center with small house and workshop icons.
 - Detail → Add schedule opens Edit Asset and scrolls to the reminders section (`focusSection: 'reminders'`).
 - PIN pad accepts hardware number keys on web.
@@ -97,3 +97,6 @@ cd api && npm install && npm run db:local && npm run dev
 # API production
 cd api && npm run deploy
 ```
+
+- Home: four schedule legend items stay in one row; profile shows email verification status and links to Account for verification. Condition dropdown uses the same green/amber/red dots as tiles.
+- Hashed web assets use immutable caching via `public/_headers`; keep HTML revalidated so deployments load the latest bundle.

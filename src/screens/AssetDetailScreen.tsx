@@ -90,8 +90,8 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   const asset = state.assets.find((a) => a.id === route.params.assetId);
   React.useLayoutEffect(() => {
     navigation.setOptions({ headerRight: () => asset && !asset.archived ? (
-      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })} style={styles.headerAction}>
-        <Text style={styles.actionText}>{t.edit}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={t.edit} onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })} style={styles.headerAction}>
+        <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: 20, color: colors.text }}>✎</Text><Text style={styles.editText}>{t.edit}</Text>
       </Pressable>
     ) : null });
   }, [navigation, asset?.id, asset?.archived, t.edit]);
@@ -172,7 +172,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
       ) : null}
 
       <View style={styles.hero}>
-        <Image source={TYPE_IMAGES[asset.type]} style={styles.heroImage} resizeMode="contain" />
+        <Image fadeDuration={0} source={TYPE_IMAGES[asset.type]} style={styles.heroImage} resizeMode="contain" />
         <View style={styles.heroCopy}>
           <Text style={styles.kicker}>{t[asset.type]}</Text>
           <Text style={styles.title}>{asset.name}</Text>
@@ -180,7 +180,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
           {yearLine(asset) ? <Text style={styles.spec}>{yearLine(asset)}</Text> : null}
           {asset.usageCurrent != null ? (
             <View style={styles.kmRow} accessibilityLabel={`${t.currentKm} ${formatKm(asset.usageCurrent, state.language)}`}>
-              <Image
+              <Image fadeDuration={0}
                 source={require('../../assets/icons/odometer.png')}
                 style={styles.kmIcon}
                 resizeMode="contain"
@@ -440,7 +440,8 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 }
 
 const styles = StyleSheet.create({
-  headerAction: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12 },
+  editText: { fontSize: 15, fontWeight: '600', color: colors.text },
+  headerAction: { flexDirection: 'row', gap: 6, minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12 },
   actionText: { fontSize: 15, fontWeight: '600', color: colors.text, textDecorationLine: 'underline' },
   statusRow: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
   statusItem: { flex: 1, minWidth: 120 },

@@ -58,14 +58,14 @@ export function AssetTile({
     >
       <View style={styles.top}>
         <View style={styles.media}>
-          <Image
+          <Image fadeDuration={0}
             source={TYPE_IMAGES[asset.type]}
             style={{ width: icon, height: icon }}
             resizeMode="contain"
           />
           {atShop ? (
             compact ? (
-              <Image
+              <Image fadeDuration={0}
                 source={require('../../assets/location/workshop.png')}
                 style={styles.badgeIcon}
                 resizeMode="contain"

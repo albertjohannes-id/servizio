@@ -26,7 +26,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 const GRID_GAP = 12;
 
 export function HomeScreen({ navigation }: Props) {
-  const { email, cloudLinked } = useAuth();
+  const { email, cloudLinked, emailVerified } = useAuth();
   const { ready, state, setLanguage, syncStatus, syncMeta } = useAssets();
   const t = dictionaries[state.language];
   const insets = useSafeAreaInsets();
@@ -145,10 +145,11 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.avatarLetter}>{(email?.[0] ?? 'S').toUpperCase()}</Text>
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.profileLabel}>{t.account}</Text>
+              <Text style={styles.profileLabel}>{emailVerified ? t.emailVerified : t.emailUnverified}</Text>
               <Text style={styles.profileEmail} numberOfLines={1}>
                 {email}
               </Text>
+              {!emailVerified && <Text style={styles.verificationHint}>{t.verifyForSync}</Text>}
             </View>
             <Text style={styles.chevron}>›</Text>
           </Pressable>
@@ -206,11 +207,12 @@ const styles = StyleSheet.create({
   syncBannerText: { fontSize: 14, fontWeight: '500', color: colors.text },
   syncBannerSub: { marginTop: 4, fontSize: 12, color: colors.muted, lineHeight: 18 },
   scroll: { flex: 1 },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: spacing.md },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legend: { flexDirection: 'row', gap: 4, marginBottom: spacing.md },
+  legendItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5 },
   legendSwatch: { width: 12, height: 12, borderRadius: 3 },
   legendSwatchOutlined: { borderWidth: 1, borderColor: colors.line },
-  legendLabel: { fontSize: 12, color: colors.muted },
+  legendLabel: { fontSize: 10, color: colors.muted, textAlign: 'center' },
+  verificationHint: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   empty: { paddingTop: spacing.xl },
   emptyTitle: { fontSize: 18, color: colors.text },

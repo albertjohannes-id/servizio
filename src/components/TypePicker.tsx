@@ -32,7 +32,7 @@ export function TypePicker({
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={t[item]}
               >
-                <Image source={TYPE_IMAGES[item]} style={styles.image} resizeMode="contain" />
+                <Image fadeDuration={0} source={TYPE_IMAGES[item]} style={styles.image} resizeMode="contain" />
                 <Text style={[styles.label, on && styles.labelOn]} numberOfLines={1}>
                   {t[item]}
                 </Text>

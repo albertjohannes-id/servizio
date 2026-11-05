@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
@@ -58,14 +58,6 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
     });
   };
   const [location, setLocation] = useState<AssetLocation>(existing?.location ?? 'home');
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({ headerBackVisible: false, headerLeft: () => (
-      <Pressable accessibilityRole="button" style={styles.headerAction} onPress={() => navigation.goBack()}>
-        <Text style={styles.headerText}>{t.cancel}</Text>
-      </Pressable>
-    ) });
-  }, [navigation, t.cancel]);
 
   const initialType = existing?.type ?? 'car';
   const typeDefault = DEFAULT_INTERVALS[initialType];
@@ -190,7 +182,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
     <ScrollView ref={scrollRef} onContentSizeChange={scrollToReminders} keyboardShouldPersistTaps="handled" style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>{t.assetDetails}</Text>
+      <Text style={[styles.sectionTitle, { marginTop: 4 }]}>{t.assetDetails}</Text>
       <Text style={styles.requiredHint}>{t.requiredHint}</Text>
 
       <Text style={styles.label}>{t.kind}</Text>
@@ -249,7 +241,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
 
       <Text style={styles.sectionTitle}>{t.conditionLocation}</Text>
       <SelectField label={t.condition} value={condition} onChange={setCondition}
-        options={(['working', 'needs_attention', 'not_working'] as ConditionStatus[]).map((value) => ({ value, label: t[value] }))} />
+        options={(['working', 'needs_attention', 'not_working'] as ConditionStatus[]).map((value) => ({ value, label: t[value], color: value === 'working' ? colors.ok : value === 'needs_attention' ? colors.warn : colors.danger }))} />
 
       <Text style={styles.label}>{t.location}</Text>
       <LocationPicker value={location} onChange={setLocation} t={t} />
@@ -316,8 +308,6 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  headerAction: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
-  headerText: { fontSize: 15, color: colors.text },
   sectionTitle: { fontSize: 19, fontWeight: '600', color: colors.text, marginTop: 24, marginBottom: 4 },
   bottomBar: { padding: 16, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.bg },
   container: { flex: 1, backgroundColor: colors.bg },

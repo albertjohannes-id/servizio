@@ -75,3 +75,13 @@ Before deploying, run `npx wrangler whoami` and confirm the account owns the exi
 After deploying, verify `https://api.servizio.ai.id/health` returns `ok: true` and `photos: true`, and that an OPTIONS request with `Origin: https://servizio.ai.id` returns that origin in `Access-Control-Allow-Origin`. Confirm the frontend loads and its JavaScript bundle targets `https://api.servizio.ai.id`.
 
 Browser storage is scoped to the frontend origin. Users moving from the old Workers URL must sign in again to restore cloud data. Export any unsynced local-only data from the old origin before moving.
+
+### Deployment verified 2026-11-05
+
+- API version: `01fd5aa2-2eb1-45e4-b73b-a886bd9d7b68`.
+- Frontend version: `eabdd024-e08c-45fa-b25b-b6cdaa886b84`.
+- Frontend and API TypeScript checks passed; production web export succeeded.
+- Live API health returned HTTP 200 with `ok: true` and `photos: true`.
+- Live OPTIONS `/sync` returned HTTP 204 and allowed `https://servizio.ai.id`, PUT, and the authorization/content-type headers.
+- The live frontend bundle matched the local build and contained the new API URL with no old API URL.
+- Authenticated OTP, sync, and photo operations were not exercised during this domain deployment.

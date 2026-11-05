@@ -1,4 +1,5 @@
 import React from 'react';
+import { SelectField } from './SelectField';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DEFAULT_INTERVALS } from '../data/seed';
 import { AssetType } from '../domain/types';
@@ -43,7 +44,9 @@ export function ScheduleModePicker({
   value,
   onChange,
   t,
+  dropdown = false,
 }: {
+  dropdown?: boolean;
   type: AssetType;
   value: ScheduleMode;
   onChange: (next: ScheduleMode) => void;
@@ -51,6 +54,9 @@ export function ScheduleModePicker({
 }) {
   const kmCapable = DEFAULT_INTERVALS[type]?.km != null;
   const options = MODES.filter((m) => !m.kmOnly || kmCapable);
+
+  if (dropdown) return <SelectField label={t.scheduleMode} required value={value} onChange={onChange}
+    options={options.map((item) => ({ value: item.id, label: t[item.title], hint: t[item.hint] }))} />;
 
   return (
     <View>

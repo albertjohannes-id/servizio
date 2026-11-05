@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAssets } from '../data/AssetContext';
 import { pickImage } from '../data/pickImage';
@@ -21,8 +22,6 @@ import { AssetChange, ChangeField } from '../domain/types';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TappablePhoto } from '../components/TappablePhoto';
-import { ConditionPicker } from '../components/ConditionPicker';
-import { LocationPicker } from '../components/LocationPicker';
 import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
@@ -78,10 +77,9 @@ function formatChangeValue(
 }
 
 export function AssetDetailScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
   const {
     state,
-    setCondition,
-    setLocation,
     restoreAsset,
     permanentlyDeleteAsset,
     updateLogPhotos,
@@ -90,6 +88,13 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   } = useAssets();
   const t = dictionaries[state.language];
   const asset = state.assets.find((a) => a.id === route.params.assetId);
+  React.useLayoutEffect(() => {
+    navigation.setOptions({ headerRight: () => asset && !asset.archived ? (
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })} style={styles.headerAction}>
+        <Text style={styles.actionText}>{t.edit}</Text>
+      </Pressable>
+    ) : null });
+  }, [navigation, asset?.id, asset?.archived, t.edit]);
   const [tab, setTab] = useState<HistoryTab>('service');
   const [savedVisible, setSavedVisible] = useState(!!route.params.showSaved);
   const [openLogId, setOpenLogId] = useState<string | null>(null);
@@ -153,6 +158,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
   };
 
   return (
+    <View style={styles.container}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {savedVisible ? (
         <View style={styles.toast}>
@@ -182,58 +188,28 @@ export function AssetDetailScreen({ navigation, route }: Props) {
               <Text style={styles.kmValue}>{formatKm(asset.usageCurrent, state.language)}</Text>
             </View>
           ) : null}
-          <Text style={styles.due}>
-            {untracked
-              ? dueNote
-              : `${t[service]} · ${dueNote}${asset.location === 'service_center' ? ` · ${t.locationServiceCenter}` : ''}`}
-          </Text>
+          {!untracked && <Text style={styles.due}>{t[service]}</Text>}
         </View>
       </View>
 
-      {!asset.archived && untracked ? (
-        <View style={styles.scheduleBanner}>
-          <Text style={styles.scheduleBannerText}>{t.untrackedBanner}</Text>
-          <PrimaryButton
-            label={t.addSchedule}
-            variant="ghost"
-            onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })}
-          />
-        </View>
-      ) : null}
-
-      {asset.archived ? (
-        <View style={styles.actions}>
-          <PrimaryButton label={t.restoreAsset} onPress={confirmRestore} />
-          <PrimaryButton label={t.deleteForever} variant="danger" onPress={confirmDelete} />
-        </View>
-      ) : (
-        <>
-          <Text style={styles.label}>{t.condition}</Text>
-          <ConditionPicker value={asset.condition} onChange={(next) => setCondition(asset.id, next)} t={t} />
-
-          <Text style={styles.label}>{t.location}</Text>
-          <LocationPicker value={asset.location} onChange={(next) => setLocation(asset.id, next)} t={t} />
-
-          <View style={styles.actions}>
-            <PrimaryButton
-              label={t.logServiceNow}
-              onPress={() => navigation.navigate('LogService', { assetId: asset.id })}
-            />
-            {DEFAULT_INTERVALS[asset.type]?.km != null ? (
-              <PrimaryButton
-                label={t.logKm}
-                variant="ghost"
-                onPress={() => navigation.navigate('LogKm', { assetId: asset.id })}
-              />
-            ) : null}
-            <PrimaryButton
-              label={t.edit}
-              variant="ghost"
-              onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id })}
-            />
-          </View>
-        </>
-      )}
+      <View style={styles.statusRow}>
+        <View style={styles.statusItem}><Text style={styles.label}>{t.condition}</Text><Text style={styles.statusValue}>{t[asset.condition]}</Text></View>
+        <View style={styles.statusItem}><Text style={styles.label}>{t.location}</Text><Text style={styles.statusValue}>{asset.location === 'service_center' ? t.locationServiceCenter : t.locationHome}</Text></View>
+      </View>
+      <View style={styles.reminders}>
+        <Text style={styles.label}>{t.reminders}</Text>
+        <Text style={styles.statusValue}>{untracked ? t.noReminders : dueNote}</Text>
+        {!asset.archived && untracked && (
+          <Pressable accessibilityRole="button" style={styles.scheduleAction}
+            onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id, focusSection: 'reminders' })}>
+            <Text style={styles.actionText}>{t.addSchedule}</Text>
+          </Pressable>
+        )}
+      </View>
+      {asset.archived && <View style={styles.actions}>
+        <PrimaryButton label={t.restoreAsset} onPress={confirmRestore} />
+        <PrimaryButton label={t.deleteForever} variant="danger" onPress={confirmDelete} />
+      </View>}
 
       <View style={styles.tabs}>
         <Pressable
@@ -445,6 +421,11 @@ export function AssetDetailScreen({ navigation, route }: Props) {
         </Pressable>
       </Modal>
     </ScrollView>
+    {!asset.archived && <View style={[styles.bottomBar, { paddingBottom: Math.max(16, insets.bottom) }]}>
+      <View style={styles.primaryAction}><PrimaryButton label={t.logServiceNow} onPress={() => navigation.navigate('LogService', { assetId: asset.id })} /></View>
+      {DEFAULT_INTERVALS[asset.type]?.km != null && <View style={styles.secondaryAction}><PrimaryButton label={t.logKm} variant="ghost" onPress={() => navigation.navigate('LogKm', { assetId: asset.id })} /></View>}
+    </View>}
+    </View>
   );
 }
 
@@ -459,6 +440,16 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 }
 
 const styles = StyleSheet.create({
+  headerAction: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12 },
+  actionText: { fontSize: 15, fontWeight: '600', color: colors.text, textDecorationLine: 'underline' },
+  statusRow: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
+  statusItem: { flex: 1, minWidth: 120 },
+  statusValue: { fontSize: 16, color: colors.text },
+  reminders: { marginTop: 16, borderTopWidth: 1, borderColor: colors.line },
+  scheduleAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  bottomBar: { padding: 16, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.bg, flexDirection: 'row', gap: 10 },
+  primaryAction: { flex: 2 },
+  secondaryAction: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

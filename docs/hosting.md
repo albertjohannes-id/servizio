@@ -85,3 +85,9 @@ Browser storage is scoped to the frontend origin. Users moving from the old Work
 - Live OPTIONS `/sync` returned HTTP 204 and allowed `https://servizio.ai.id`, PUT, and the authorization/content-type headers.
 - The live frontend bundle matched the local build and contained the new API URL with no old API URL.
 - Authenticated OTP, sync, and photo operations were not exercised during this domain deployment.
+
+### Asset UI verification — 2026-11-05
+
+The detail screen now has header Edit, a compact condition/location row, contextual reminders, and a fixed service action bar. Add/Edit uses condition/reminder dropdowns, header Cancel, fixed Save, and a separate Archive asset action. Location changes are saved through the edit form.
+
+Verified in headless Chrome at 390 × 844 with isolated local test data: Add schedule scrolls reminders into view; Save remains visible; condition, location, and date reminders persist; Cancel discards edits; dismissing archive confirmation preserves the asset. Detail and edit screenshots were inspected. Frontend/API TypeScript checks and production web export passed. Native device and authenticated cloud sync flows were not exercised for this UI change.

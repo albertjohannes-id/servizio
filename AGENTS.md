@@ -53,7 +53,10 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - Suggest/search lists (brand, vendor, purchase-at) open **only while the field is focused**. Purchase-at presets: Shopee, Tokopedia, Blibli, Lazada, Official Dealer, Secondhand.
 - Dates: compact in-app calendar (not full-screen). Years: dropdown.
 - Kind picker: 3-across, transparent 3D icons. Name placeholder follows kind.
-- Location picker: Home / Service Center with small house and workshop icons.
+- Asset detail shows condition and location in a compact row; Edit is in the header. Reminders have a contextual Add schedule action. Log service and Log km stay in a bottom action bar.
+- Add/Edit Asset groups details, condition/location, and reminders; Cancel is in the header, Save is in a fixed bottom bar, and Archive asset is separated at the end of the form with confirmation.
+- Add/Edit Asset: condition and reminders use dropdowns. Location picker: Home / Service Center with small house and workshop icons.
+- Detail → Add schedule opens Edit Asset and scrolls to the reminders section (`focusSection: 'reminders'`).
 - PIN pad accepts hardware number keys on web.
 - History: service and change cards; tap for a detail modal. Changes store **field + old + new + time**. Photos in modals use `TappablePhoto`. On a service log sheet you can **attach / change / remove** receipt and service-tag photos (marks sync dirty → R2 on next push).
 

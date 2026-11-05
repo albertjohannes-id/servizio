@@ -17,7 +17,7 @@ Without Resend, `ALLOW_OTP_IN_RESPONSE=true` returns `devOtp` in the JSON for lo
 
 | Piece | Value |
 |-------|--------|
-| Worker | `servizio-api` → https://servizio-api.albertjohannes-id.workers.dev |
+| Worker | `servizio-api` → https://api.servizio.ai.id |
 | D1 | `servizio` (APAC), binding `DB` |
 | R2 | `servizio-photos` (APAC), binding `PHOTOS` — receipt + service-tag images |
 | From | `Servizio <noreply@inovateks.id>` (domain verified in Resend; DNS can live on Hostinger or Cloudflare) |

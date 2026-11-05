@@ -18,13 +18,13 @@ function apiBase(): string {
   const fromEnv =
     typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_API_URL : undefined;
   const baked = String(fromEnv || '').replace(/\/+$/, '');
-  // Safety: a public workers.dev build must never call localhost (phone/offline banner).
+  // Production web builds must not fall back to a local API.
   if (
     typeof window !== 'undefined' &&
-    /workers\.dev$/i.test(window.location.hostname) &&
+    (window.location.hostname === 'servizio.ai.id' || /workers\.dev$/i.test(window.location.hostname)) &&
     (!baked || /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baked))
   ) {
-    return 'https://servizio-api.albertjohannes-id.workers.dev';
+    return 'https://api.servizio.ai.id';
   }
   return baked || 'http://127.0.0.1:8787';
 }

@@ -5,6 +5,7 @@
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "routes": [{ "pattern": "api.servizio.ai.id", "custom_domain": true }],
   "observability": { "enabled": true },
   "d1_databases": [
     {
@@ -21,7 +22,7 @@
     }
   ],
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://127.0.0.1:19006,https://servizio.albertjohannes-id.workers.dev",
+    "ALLOWED_ORIGINS": "https://servizio.ai.id,http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://127.0.0.1:19006,https://servizio.albertjohannes-id.workers.dev",
     "ALLOW_OTP_IN_RESPONSE": "false",
     "RESEND_FROM": "Servizio <noreply@inovateks.id>"
   }

@@ -38,7 +38,7 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - **PIN is local forever.** Never send PIN or PIN hash to the Worker.
 - **Phase 1.1 cloud:** Cloudflare Worker + D1 (`prototype/api`). Email-first setup; existing emails always OTP (Resend). After verify, D1 blob is source of truth; local is offline cache. Full-blob sync with integer `revision`; 409 → user picks Use cloud / Keep mine.
 - **Phase 1.2 photos:** R2 bucket `servizio-photos` (binding `PHOTOS`). On sync, local receipt/service-tag images upload via `PUT /media`, then log URIs become `r2:users/{userId}/logs/{logId}/…`. Display loads via authenticated `GET /media`. Never put photo bytes in the D1 JSON blob.
-- **Deployed (prod test):** app `https://servizio.albertjohannes-id.workers.dev` → API `https://servizio-api.albertjohannes-id.workers.dev`. Build with `EXPO_PUBLIC_API_URL` set, then `npm run export:web` + `npx wrangler deploy` from `prototype/`. API: `cd api && npm run deploy`. Secret `RESEND_API_KEY` must be on Worker **`servizio-api`** (not the static `servizio` Worker).
+- **Production:** app `https://servizio.ai.id` → API `https://api.servizio.ai.id`. Build with `EXPO_PUBLIC_API_URL` set, then `npm run export:web` + `npx wrangler deploy` from `prototype/`. API: `cd api && npm run deploy`. Secret `RESEND_API_KEY` must be on Worker **`servizio-api`** (not the static `servizio` Worker).
 - Client: `EXPO_PUBLIC_API_URL` (see `.env.example`). `src/data/apiClient.ts`, `cloudSync.ts`, `syncStorage.ts`. Sync UI: Account shows pending / last synced / offline / conflict; Home banners for conflict, offline-with-dirty, and errors. Auto-sync skips while a conflict is unresolved; expired sessions clear local cloud tokens.
 - Old `serviceOverride: 'in_service'` migrates to `location: 'service_center'` in `normalizeAsset`.
 - Missing `scheduleByDate` on loaded assets defaults to `true`. Missing `serviceKind` on logs defaults to `routine`.
@@ -87,7 +87,7 @@ npm install
 npm run web
 npx tsc --noEmit
 # Public web (bake API URL into the bundle)
-EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev npm run export:web
+EXPO_PUBLIC_API_URL=https://api.servizio.ai.id npm run export:web
 npx wrangler deploy
 # API
 cd api && npm install && npm run db:local && npm run dev

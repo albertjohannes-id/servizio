@@ -1,6 +1,8 @@
 {
 	"$schema": "https://unpkg.com/wrangler@4.34.0/config-schema.json",
 	"name": "servizio",
+	"workers_dev": true,
+	"routes": [{ "pattern": "servizio.ai.id", "custom_domain": true }],
 	"compatibility_date": "2026-08-18",
 	"assets": {
 		"directory": "./dist",

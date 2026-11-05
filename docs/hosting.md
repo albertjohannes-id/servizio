@@ -1,4 +1,4 @@
-# Expo web → Cloudflare Pages
+# Expo web → Cloudflare Workers
 
 Static SPA. No server.
 
@@ -28,7 +28,7 @@ This is **two fields**, not one command. Project name must stay `servizio` (matc
 | Deploy command (production) | `npx wrangler deploy` |
 | Non-production builds | `npx wrangler versions upload` (leave default) |
 | API token | leave **Create new token** |
-| Env vars | `NODE_VERSION` = `20` |
+| Env vars | `NODE_VERSION` = `20`; `EXPO_PUBLIC_API_URL` = `https://api.servizio.ai.id` |
 
 Do not put `wrangler deploy` in the **build** command. Expo only writes `dist/`; Wrangler uploads it.
 
@@ -36,26 +36,26 @@ Do not put `wrangler deploy` in the **build** command. Expo only writes `dist/`;
 
 Host at site root. Subpaths need extra `baseUrl` work — skip for MVP.
 
-The **sync API** is a separate Worker (`api/wrangler.jsonc`, name `servizio-api`). Deploy it independently. **Bake** `EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev` into the web export — env is compile-time for Expo, not a runtime Workers binding on the static site.
+The **sync API** is a separate Worker (`api/wrangler.jsonc`, name `servizio-api`). Deploy it independently. **Bake** `EXPO_PUBLIC_API_URL=https://api.servizio.ai.id` into the web export — env is compile-time for Expo, not a runtime Workers binding on the static site.
 
 Do not put `RESEND_API_KEY` on the static `servizio` Worker; it belongs on **`servizio-api`**.
 
 **Photos (1.2):** R2 bucket `servizio-photos` is bound on `servizio-api` as `PHOTOS`. `/health` reports `photos: true`. No public R2 URLs — the app loads images via authenticated `GET /media`.
 
-**Live:** https://servizio.albertjohannes-id.workers.dev → API https://servizio-api.albertjohannes-id.workers.dev
+**Live:** https://servizio.ai.id → API https://api.servizio.ai.id
 
 Manual deploy from repo root of the app:
 
 ```bash
 npm run deploy:web
 # or:
-EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev npm run export:web
+EXPO_PUBLIC_API_URL=https://api.servizio.ai.id npm run export:web
 npx wrangler deploy
 # API (when Worker/R2/D1 changes):
 cd api && npm run deploy
 ```
 
-**Important:** `expo export` bakes `EXPO_PUBLIC_API_URL` at build time. Exporting without it leaves `127.0.0.1:8787` in the bundle — phones will show the offline sync banner. Always use `npm run deploy:web` (or set the env var). Cloudflare Git builds must set the same variable.
+**Important:** `expo export` bakes `EXPO_PUBLIC_API_URL` at build time. Always use `npm run deploy:web` (or set the env var). Cloudflare Git builds must set the same variable. The production domain and Workers preview hostnames fall back to the production API when this setting is missing or points to localhost; local development still defaults to `127.0.0.1:8787`.
 
 ## Local production preview
 
@@ -65,3 +65,13 @@ npx expo serve
 ```
 
 OS notifications are native-only. Persistence is localStorage on web.
+
+## Production domains
+
+The frontend and API custom domains are declared in their respective `wrangler.jsonc` files. The API allows `https://servizio.ai.id` through `ALLOWED_ORIGINS`; the previous Workers frontend remains allowed during migration. Deploy the API before the frontend.
+
+Before deploying, run `npx wrangler whoami` and confirm the account owns the existing Servizio Workers, D1 database, and R2 bucket. If deployment reports that the configured D1 database was not found, check the authenticated account before changing resource IDs or creating a replacement database. Use `npx wrangler login` to authorize the correct account when needed.
+
+After deploying, verify `https://api.servizio.ai.id/health` returns `ok: true` and `photos: true`, and that an OPTIONS request with `Origin: https://servizio.ai.id` returns that origin in `Access-Control-Allow-Origin`. Confirm the frontend loads and its JavaScript bundle targets `https://api.servizio.ai.id`.
+
+Browser storage is scoped to the frontend origin. Users moving from the old Workers URL must sign in again to restore cloud data. Export any unsynced local-only data from the old origin before moving.

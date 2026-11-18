@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.3',
+    date: '2026-11-18',
+    en: [
+      'When you verify your email, your phone can now suggest the code from the email above the keyboard, so you can fill it in with one tap.',
+    ],
+    id: [
+      'Saat memverifikasi email, ponselmu kini bisa menyarankan kode dari email di atas keyboard, jadi cukup satu ketukan untuk mengisinya.',
+    ],
+  },
+  {
     version: '1.2.2',
     date: '2026-11-18',
     en: [

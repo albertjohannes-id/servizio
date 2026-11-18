@@ -282,6 +282,8 @@ export function SetupScreen() {
               value={otp}
               onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
               keyboardType="number-pad"
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
               placeholder="123456"
               returnKeyType="done"
               onSubmitEditing={() => void onVerifyOtp()}

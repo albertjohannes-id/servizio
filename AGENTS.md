@@ -23,6 +23,8 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
   - Optional notes, cost, **receipt** and **service tag** photos (tap for full screen), vendor.
 - **Log km** — separate screen from Log service; updates `usageCurrent` only (change history). Available for **km-capable kinds** (car / motorcycle / bike) even if schedule is still **Not yet** (does not force `usageEnabled`).
 - OTP email via **Resend** (`noreply@inovateks.id` in prod). Client shows **Resend code** with ~45s cooldown; codes expire in **10 minutes** (server-enforced).
+  - The code is in the email subject (`Your Servizio code: 123456`) and in large type in the body. **Do not add a "Copy" button to the email**: email clients strip JavaScript, so it cannot copy to the clipboard.
+  - Both code fields (Setup, Account verify) set `autoComplete="one-time-code"`, `textContentType="oneTimeCode"` and a numeric keyboard, so iOS/Android keyboards offer the code from the email/SMS in one tap.
 - JSON backup/export on Account; **binary photos are not in the JSON** (export keeps `r2:` keys / local URIs as strings only). Archive is soft-hide; Account → Archived assets can restore or permanently delete.
 - First run: start empty (primary) or load sample data.
 - Setup: **Enter** submits the email field (Continue) and the verification-code field (Verify); same for the code field when verifying on Account. Both guard against double submit while busy.

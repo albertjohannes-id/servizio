@@ -240,9 +240,12 @@ export function AccountScreen({ navigation }: Props) {
                 value={otp}
                 onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
                 keyboardType="number-pad"
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
                 placeholder="123456"
                 returnKeyType="done"
                 onSubmitEditing={() => void onConfirmVerify()}
+                {...(Platform.OS === 'web' ? ({ inputMode: 'numeric' } as object) : {})}
               />
               <Text style={styles.menuSub}>{t.otpExpiresHint}</Text>
               {devOtp ? (

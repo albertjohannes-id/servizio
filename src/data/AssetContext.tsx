@@ -542,7 +542,14 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
         await saveState(merged);
         setState(merged);
       },
-      logsFor: (assetId) => s.logs.filter((l) => l.assetId === assetId),
+      logsFor: (assetId) =>
+        s.logs
+          .filter((l) => l.assetId === assetId)
+          .sort(
+            (a, b) =>
+              (b.servicedAt ?? '').localeCompare(a.servicedAt ?? '') ||
+              (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
+          ),
       changesFor: (assetId) => (s.changes ?? []).filter((c) => c.assetId === assetId),
     };
   }, [

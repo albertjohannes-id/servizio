@@ -78,6 +78,8 @@ export function SetupScreen() {
   const finishLocal = useCallback(
     async (withSample: boolean) => {
       setBusy(true);
+      // Before completeSetup: Home mounts as soon as the app unlocks and reads this marker.
+      await markWhatsNewSeen();
       const code = await completeSetup(pin, pin);
       if (code) {
         setBusy(false);
@@ -94,7 +96,6 @@ export function SetupScreen() {
       }
       if (withSample) loadSampleData();
       else startEmpty();
-      void markWhatsNewSeen();
       void syncNow();
       setBusy(false);
     },
@@ -106,6 +107,7 @@ export function SetupScreen() {
     async (confirmedPin: string) => {
       if (!pendingCloudBlob) return;
       setBusy(true);
+      await markWhatsNewSeen();
       await applyRemoteState(pendingCloudBlob);
       clearPendingCloudBlob();
       const code = await completeSetup(confirmedPin, confirmedPin);
@@ -116,7 +118,6 @@ export function SetupScreen() {
         setPin('');
         return;
       }
-      void markWhatsNewSeen();
       void syncNow();
       setBusy(false);
     },

@@ -72,6 +72,8 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - Add/Edit Asset: condition and reminders use dropdowns. Location picker: Home / Service Center with small house and workshop icons.
 - Detail → Add schedule opens Edit Asset and scrolls to the reminders section (`focusSection: 'reminders'`).
 - PIN pad accepts hardware number keys on web.
+- **Navigation after save:** React Navigation 7 `navigate()` to a screen already in the stack pushes a duplicate (back then reopens the form). To return, use `navigation.popTo('Screen', params)`. Saving a service record, km, or asset edit pops back to the existing Asset detail with `savedAt: Date.now()` (shows the "Saved" toast); archive / restore / delete pop to Home / Archived. A new asset uses `replace('AssetDetail')`.
+- Avoid `CI=1` for a long-running `expo start` while editing: it disables file watching and serves stale bundles.
 - History: service and change cards; tap for a detail modal. Changes store **field + old + new + time**. Photos in modals use `TappablePhoto`. On a service log sheet you can **attach / change / remove** receipt and service-tag photos (marks sync dirty → R2 on next push).
 
 ## Layout

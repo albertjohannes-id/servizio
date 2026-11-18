@@ -96,9 +96,14 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     ) : null });
   }, [navigation, asset?.id, asset?.archived, t.edit]);
   const [tab, setTab] = useState<HistoryTab>('service');
-  const [savedVisible, setSavedVisible] = useState(!!route.params.showSaved);
+  const savedAt = route.params.savedAt;
+  const [savedVisible, setSavedVisible] = useState(!!savedAt);
   const [openLogId, setOpenLogId] = useState<string | null>(null);
   const [openChange, setOpenChange] = useState<AssetChange | null>(null);
+
+  React.useEffect(() => {
+    if (savedAt) setSavedVisible(true);
+  }, [savedAt]);
 
   React.useEffect(() => {
     if (savedVisible) {
@@ -129,7 +134,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     const body = t.restoreConfirmBody.replace('{name}', asset.name);
     const run = () => {
       restoreAsset(asset.id);
-      navigation.navigate('Home');
+      navigation.popTo('Home');
     };
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(body)) run();
@@ -145,7 +150,7 @@ export function AssetDetailScreen({ navigation, route }: Props) {
     const body = t.deleteForeverBody.replace('{name}', asset.name);
     const run = () => {
       permanentlyDeleteAsset(asset.id);
-      navigation.navigate('ArchivedAssets');
+      navigation.popTo('ArchivedAssets');
     };
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(body)) run();

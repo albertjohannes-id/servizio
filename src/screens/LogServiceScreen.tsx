@@ -165,7 +165,7 @@ export function LogServiceScreen({ navigation, route }: Props) {
           ? parseNumber(usageCurrent) ?? asset.usageCurrent
           : undefined,
     });
-    navigation.navigate('AssetDetail', { assetId: asset.id, showSaved: true });
+    navigation.popTo('AssetDetail', { assetId: asset.id, savedAt: Date.now() });
   };
 
   return (

@@ -13,6 +13,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.1',
+    date: '2026-11-18',
+    en: [
+      'After saving a service record, the back arrow now takes you to Home instead of back to the form.',
+      'Same fix after saving a km update, editing an asset, or archiving one.',
+      'New accounts no longer see the “What’s new” pop-up on their first visit.',
+    ],
+    id: [
+      'Setelah menyimpan catatan servis, tombol kembali kini membawamu ke Beranda, bukan ke formulir lagi.',
+      'Perbaikan yang sama setelah menyimpan km, mengubah aset, atau mengarsipkannya.',
+      'Akun baru tidak lagi melihat pop-up “Yang baru” saat pertama kali masuk.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-11-18',
     en: [

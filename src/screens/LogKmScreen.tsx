@@ -59,7 +59,7 @@ export function LogKmScreen({ navigation, route }: Props) {
   const onSave = () => {
     if (parsed == null || kmError) return;
     updateUsage(asset.id, parsed);
-    navigation.navigate('AssetDetail', { assetId: asset.id, showSaved: true });
+    navigation.popTo('AssetDetail', { assetId: asset.id, savedAt: Date.now() });
   };
 
   return (

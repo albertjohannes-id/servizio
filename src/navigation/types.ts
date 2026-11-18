@@ -5,7 +5,7 @@ export type RootStackParamList = {
   Account: undefined;
   ArchivedAssets: undefined;
   AddEditAsset: { assetId?: string; focusSection?: 'reminders' } | undefined;
-  AssetDetail: { assetId: string; showSaved?: boolean };
+  AssetDetail: { assetId: string; savedAt?: number };
   LogService: { assetId: string };
   LogKm: { assetId: string };
   DebugMetrics: undefined;

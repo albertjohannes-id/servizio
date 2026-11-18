@@ -176,7 +176,11 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
       usageNextDue: flags.usageEnabled ? parseNumber(usageNextDue) : null,
       location,
     });
-    navigation.replace('AssetDetail', { assetId: id });
+    if (existing) {
+      navigation.popTo('AssetDetail', { assetId: id, savedAt: Date.now() });
+    } else {
+      navigation.replace('AssetDetail', { assetId: id, savedAt: Date.now() });
+    }
   };
 
   return (
@@ -287,7 +291,7 @@ export function AddEditAssetScreen({ navigation, route }: Props) {
             onPress={() => {
               const run = () => {
                 archiveAsset(existing.id);
-                navigation.navigate('Home');
+                navigation.popTo('Home');
               };
               if (Platform.OS === 'web') {
                 if (typeof window !== 'undefined' && window.confirm(t.archiveConfirmBody)) run();

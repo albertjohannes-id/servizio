@@ -28,7 +28,7 @@ Without Resend, local OTP is returned as `devOtp` in the JSON (`ALLOW_OTP_IN_RES
 ## What this MVP does
 
 - **Local 6-digit PIN** (hashed on device). Locks after 1 hour idle. PIN is never sent to the server.
-- **Email-first setup:** new emails create a local PIN (and an unverified cloud user when online). Existing emails always verify with OTP, then create a PIN on this device. Account shows verified / unverified and can verify later.
+- **Email-first setup:** new emails create a local PIN (and an unverified cloud user when online). Existing emails always verify with OTP, then create a PIN on this device and their cloud data loads automatically. **Enter** submits the email and code fields. Account shows verified / unverified and can verify later.
 - **Cloud sync (1.1):** after OTP, D1 holds the authoritative JSON blob; this device keeps an offline working copy and pushes when dirty. Revision conflicts ask Use cloud / Keep mine.
 - **Photo sync (1.2):** receipt + service-tag images upload to R2 on sync; history detail sheet can attach / change / remove photos without a new log.
 - JSON **export / import** from Account (photo **bytes** not embedded; `r2:` / local URI strings only).
@@ -44,6 +44,7 @@ Without Resend, local OTP is returned as `devOtp` in the JSON (`ALLOW_OTP_IN_RES
 - Required fields marked with `*` on submit forms.
 - English / Indonesian.
 - Offline edits stay on device until the next successful sync.
+- **What's new:** a simple per-version changelog modal (shown once after an update, and always available under Account). Source: `src/data/changelog.ts`.
 
 ## Data
 
@@ -66,14 +67,18 @@ See `api/README.md`, [docs/phase-1.1-cloud-sync.md](docs/phase-1.1-cloud-sync.md
 
 ## Web host (Cloudflare)
 
-**Live test:** https://servizio.albertjohannes-id.workers.dev (API: https://servizio-api.albertjohannes-id.workers.dev)
+**Live:** https://servizio.ai.id (API: https://api.servizio.ai.id)
 
 ```bash
-EXPO_PUBLIC_API_URL=https://servizio-api.albertjohannes-id.workers.dev npm run export:web
+EXPO_PUBLIC_API_URL=https://api.servizio.ai.id npm run export:web
 npx wrangler deploy   # uploads dist/ to Worker "servizio"
 ```
 
 See [docs/hosting.md](docs/hosting.md). Notifications are native-only; web uses in-app Due Soon / Overdue.
+
+## Versions and releases
+
+Semver, tagged in git as `vX.Y.Z` (`v1.0.0` first release, `v1.1.0` cloud sync and photos, `v1.2.0` auto-restore and What's new). To ship a version: add a top entry to `src/data/changelog.ts` (plain EN + ID bullets), bump `package.json` and `app.json`, run `npm run release:check`, commit, then `git tag -a vX.Y.Z -m "Servizio vX.Y.Z"` and `git push origin main --follow-tags`. Details in [AGENTS.md](AGENTS.md).
 
 ## License
 

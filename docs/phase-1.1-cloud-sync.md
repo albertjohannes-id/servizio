@@ -108,8 +108,8 @@ If check-email fails (offline): allow **Continue offline** (local-only until net
 2. **Always OTP** (Resend) — proves ownership before linking this device
 3. After OTP success → create **new local PIN** on this device (PIN is per-device)
 4. Link device + issue session; set `emailVerified: true`
-5. If cloud has blob and local empty → confirm restore from cloud (default: offer restore)
-6. If both have data → **user chooses**: Use cloud / Keep mine / Export & cancel
+5. If the cloud has data → it **loads automatically** right after the PIN is created (no confirm step; this is a fresh install, so there is no local data to protect)
+6. A later divergence on an already-linked device is handled by the conflict UI in Account: Use cloud / Keep mine
 
 Wording: new path ≈ “Create account”; existing ≈ “Sign in” — same setup, two branches.
 
@@ -164,7 +164,7 @@ No row-level delta merge in 1.1. “Sync only new data” = **only push when dir
 
 - Prefer **user decides** (no silent last-write-wins for diverged blobs).
 - Common case: local dirty, cloud unchanged → auto push.
-- Fresh device, cloud has data → offer restore with confirm.
+- Fresh device, cloud has data → load it automatically after OTP + PIN.
 
 ---
 
@@ -278,3 +278,4 @@ Do **not** put photos in D1 (≈1 MB statement limit). Do **not** use Zoho Mail 
 | 2026-08-20 | Initial: Worker + D1 + OTP blob sync; superseded Supabase notes |
 | 2026-08-20 | Zoho/R2 notes; then Resend preferred for OTP |
 | 2026-08-20 | **Revamp:** cloud-authoritative after link; local = offline cache; email-first setup; blob + revision; user conflict UI; Resend OTP |
+| 2026-11-18 | v1.2.0: existing email restores cloud data automatically (no choice screen); Enter submits email and code fields |

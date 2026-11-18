@@ -19,6 +19,8 @@ import { AssetTile } from '../components/AssetTile';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { RootStackParamList } from '../navigation/types';
 import { Copyright } from '../components/Copyright';
+import { WhatsNewModal } from '../components/WhatsNewModal';
+import { markWhatsNewSeen, shouldShowWhatsNew } from '../data/changelogStorage';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -32,7 +34,23 @@ export function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const assets = useMemo(() => sortAssetsForHome(state.assets), [state.assets]);
   const [gridWidth, setGridWidth] = useState(0);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const columns = state.homeColumns === 3 ? 3 : 2;
+
+  useEffect(() => {
+    let cancelled = false;
+    void shouldShowWhatsNew().then((show) => {
+      if (show && !cancelled) setWhatsNewOpen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const closeWhatsNew = () => {
+    setWhatsNewOpen(false);
+    void markWhatsNewSeen();
+  };
 
   const showSyncBanner =
     syncStatus === 'conflict' ||
@@ -156,6 +174,7 @@ export function HomeScreen({ navigation }: Props) {
           <Copyright />
         </View>
       </View>
+      <WhatsNewModal visible={whatsNewOpen} onClose={closeWhatsNew} language={state.language} />
     </SafeAreaView>
   );
 }

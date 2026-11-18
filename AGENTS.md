@@ -25,6 +25,9 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - OTP email via **Resend** (`noreply@inovateks.id` in prod). Client shows **Resend code** with ~45s cooldown; codes expire in **10 minutes** (server-enforced).
 - JSON backup/export on Account; **binary photos are not in the JSON** (export keeps `r2:` keys / local URIs as strings only). Archive is soft-hide; Account → Archived assets can restore or permanently delete.
 - First run: start empty (primary) or load sample data.
+- Setup: **Enter** submits the email field (Continue) and the verification-code field (Verify); same for the code field when verifying on Account. Both guard against double submit while busy.
+- Existing verified email: after OTP + new local PIN, cloud data **loads automatically** (no "use cloud or start empty" choice). The Use cloud / Keep mine choice only appears on a real sync conflict in Account.
+- **What's new**: `src/data/changelog.ts` lists every version in plain EN + ID bullets; shown in a modal (`WhatsNewModal`) once per version on Home, and anytime from Account → What's new. New installs are marked as seen at setup.
 - Copy: EN/ID. Public footer mark is **Inovateks** only (no legal entity names).
 - Required fields on submit forms: `FieldLabel` + `required` prop on field components; hint `requiredHint`.
 - Seed vendors (merged into existing local data by name/id): Shop And Drive, Bengkel Bos, Mister Oli, B-Quik, Rotary Auto, Jaya Teknik AC, Shell, TODA, Montir Panggilan Mas Hasan.
@@ -42,6 +45,17 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - Client: `EXPO_PUBLIC_API_URL` (see `.env.example`). `src/data/apiClient.ts`, `cloudSync.ts`, `syncStorage.ts`. Sync UI: Account shows pending / last synced / offline / conflict; Home banners for conflict, offline-with-dirty, and errors. Auto-sync skips while a conflict is unresolved; expired sessions clear local cloud tokens.
 - Old `serviceOverride: 'in_service'` migrates to `location: 'service_center'` in `normalizeAsset`.
 - Missing `scheduleByDate` on loaded assets defaults to `true`. Missing `serviceKind` on logs defaults to `routine`.
+
+## Versioning and releases
+
+- Semver. `package.json` `version` is the source; `src/version.ts` exports it as `APP_VERSION` (shown on Account and in the What's new modal). Keep `app.json` `expo.version` equal.
+- Git tags are annotated and named `vX.Y.Z` (`v1.0.0`, `v1.1.0`, `v1.2.0`, …) on the commit that ships the version.
+- Every user-visible release needs a **new top entry** in `src/data/changelog.ts` (`version`, `date`, `en[]`, `id[]`): short, plain sentences, no jargon.
+- To release:
+  1. Add the changelog entry; bump with `npm version X.Y.Z --no-git-tag-version`; set the same value in `app.json`.
+  2. `npm run release:check` (fails if package.json, app.json and the newest changelog entry disagree, or an entry lacks EN or ID text).
+  3. Commit, then `git tag -a vX.Y.Z -m "Servizio vX.Y.Z"` and `git push origin main --follow-tags`.
+  4. Deploy the web build (see Commands). The API only needs a deploy when `api/` changed.
 
 ## UI
 
@@ -89,6 +103,7 @@ docs/                   hosting + phase 1.1 / 1.2 notes
 npm install
 npm run web
 npx tsc --noEmit
+npm run release:check
 # Public web (bake API URL into the bundle)
 EXPO_PUBLIC_API_URL=https://api.servizio.ai.id npm run export:web
 npx wrangler deploy

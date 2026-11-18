@@ -17,7 +17,9 @@ import { dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Copyright } from '../components/Copyright';
 import { TextField } from '../components/TextField';
+import { WhatsNewModal } from '../components/WhatsNewModal';
 import { RootStackParamList } from '../navigation/types';
+import { APP_VERSION } from '../version';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Account'>;
@@ -76,6 +78,7 @@ export function AccountScreen({ navigation }: Props) {
   const [busy, setBusy] = useState<'export' | 'import' | 'verify' | 'sync' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [devTaps, setDevTaps] = useState(0);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [verifyStep, setVerifyStep] = useState(false);
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState<string | undefined>();
@@ -187,7 +190,7 @@ export function AccountScreen({ navigation }: Props) {
   };
 
   const onConfirmVerify = async () => {
-    if (!/^\d{6}$/.test(otp.trim())) return;
+    if (busy || !/^\d{6}$/.test(otp.trim())) return;
     setBusy('verify');
     setMessage(null);
     const result = await confirmEmailVerification(otp.trim());
@@ -238,6 +241,8 @@ export function AccountScreen({ navigation }: Props) {
                 onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
                 keyboardType="number-pad"
                 placeholder="123456"
+                returnKeyType="done"
+                onSubmitEditing={() => void onConfirmVerify()}
               />
               <Text style={styles.menuSub}>{t.otpExpiresHint}</Text>
               {devOtp ? (
@@ -395,6 +400,14 @@ export function AccountScreen({ navigation }: Props) {
         <MenuRow title={t.lockApp} subtitle={t.lockAppHint} onPress={() => void lock()} danger />
       </View>
 
+      <View style={[styles.group, styles.aboutGroup]}>
+        <MenuRow
+          title={t.whatsNew}
+          subtitle={`v${APP_VERSION} · ${t.whatsNewHint}`}
+          onPress={() => setWhatsNewOpen(true)}
+        />
+      </View>
+
       {devTaps >= 5 ? (
         <View style={styles.misc}>
           <PrimaryButton
@@ -408,10 +421,16 @@ export function AccountScreen({ navigation }: Props) {
 
       <View style={styles.footer}>
         <Pressable onPress={() => setDevTaps((n) => n + 1)} hitSlop={8}>
-          <Text style={styles.version}>{t.appVersion.replace('{version}', '1.0.0')}</Text>
+          <Text style={styles.version}>{t.appVersion.replace('{version}', APP_VERSION)}</Text>
         </Pressable>
         <Copyright />
       </View>
+
+      <WhatsNewModal
+        visible={whatsNewOpen}
+        onClose={() => setWhatsNewOpen(false)}
+        language={state.language}
+      />
     </ScrollView>
   );
 }
@@ -449,6 +468,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  aboutGroup: { marginTop: spacing.md },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',

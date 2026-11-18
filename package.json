@@ -1,6 +1,6 @@
 {
   "name": "servizio",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.11",
@@ -35,6 +35,7 @@
     "deploy:web": "EXPO_PUBLIC_API_URL=https://api.servizio.ai.id expo export --platform web && wrangler deploy",
     "api:dev": "npm --prefix api run dev",
     "api:db:local": "npm --prefix api run db:local",
+    "release:check": "node scripts/release-check.js",
     "typecheck": "tsc --noEmit && npm --prefix api run typecheck"
   },
   "private": true

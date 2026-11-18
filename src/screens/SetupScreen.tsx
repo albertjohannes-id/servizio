@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../data/AuthContext';
 import { useAssets } from '../data/AssetContext';
+import { markWhatsNewSeen } from '../data/changelogStorage';
 import { Dictionary, dictionaries } from '../i18n/strings';
 import { colors, spacing } from '../theme';
 
@@ -92,31 +94,37 @@ export function SetupScreen() {
       }
       if (withSample) loadSampleData();
       else startEmpty();
+      void markWhatsNewSeen();
       void syncNow();
       setBusy(false);
     },
     [completeSetup, isExisting, loadSampleData, pin, registerCloudAccount, startEmpty, syncNow, t]
   );
 
-  const finishRestore = useCallback(async () => {
-    if (!pendingCloudBlob) return;
-    setBusy(true);
-    await applyRemoteState(pendingCloudBlob);
-    clearPendingCloudBlob();
-    const code = await completeSetup(pin, pin);
-    if (code) {
+  /** Existing account: the cloud copy is loaded automatically once the PIN is confirmed. */
+  const finishRestore = useCallback(
+    async (confirmedPin: string) => {
+      if (!pendingCloudBlob) return;
+      setBusy(true);
+      await applyRemoteState(pendingCloudBlob);
+      clearPendingCloudBlob();
+      const code = await completeSetup(confirmedPin, confirmedPin);
+      if (code) {
+        setBusy(false);
+        setError(pinError(code, t));
+        setStep('pin');
+        setPin('');
+        return;
+      }
+      void markWhatsNewSeen();
+      void syncNow();
       setBusy(false);
-      setError(pinError(code, t));
-      setStep('pin');
-      setPin('');
-      return;
-    }
-    void syncNow();
-    setBusy(false);
-  }, [applyRemoteState, clearPendingCloudBlob, completeSetup, pendingCloudBlob, pin, syncNow, t]);
+    },
+    [applyRemoteState, clearPendingCloudBlob, completeSetup, pendingCloudBlob, syncNow, t]
+  );
 
   const onContinueEmail = useCallback(async () => {
-    if (!validEmail) return;
+    if (!validEmail || busy) return;
     setBusy(true);
     setError(null);
     const result = await checkSetupEmail();
@@ -142,7 +150,7 @@ export function SetupScreen() {
     setIsExisting(false);
     setBusy(false);
     setStep('pin');
-  }, [checkSetupEmail, requestSetupOtp, startResendCooldown, t, validEmail]);
+  }, [busy, checkSetupEmail, requestSetupOtp, startResendCooldown, t, validEmail]);
 
   const onResendOtp = useCallback(async () => {
     if (busy || resendIn > 0) return;
@@ -160,7 +168,7 @@ export function SetupScreen() {
   }, [busy, requestSetupOtp, resendIn, startResendCooldown, t]);
 
   const onVerifyOtp = useCallback(async () => {
-    if (!validOtp) return;
+    if (!validOtp || busy) return;
     setBusy(true);
     setError(null);
     const result = await verifySetupOtp(otp.trim());
@@ -170,7 +178,7 @@ export function SetupScreen() {
       return;
     }
     setStep('pin');
-  }, [otp, t, validOtp, verifySetupOtp]);
+  }, [busy, otp, t, validOtp, verifySetupOtp]);
 
   const onPinEntered = useCallback(
     async (value: string) => {
@@ -187,10 +195,14 @@ export function SetupScreen() {
         return;
       }
       setPin(value);
-      if (pendingCloudBlob) setStep('restore');
-      else setStep('sample');
+      if (pendingCloudBlob) {
+        setStep('restore');
+        void finishRestore(value);
+      } else {
+        setStep('sample');
+      }
     },
-    [pendingCloudBlob, pin, step, t.pinMismatch]
+    [finishRestore, pendingCloudBlob, pin, step, t.pinMismatch]
   );
 
   useEffect(() => {
@@ -245,6 +257,8 @@ export function SetupScreen() {
               autoCorrect={false}
               keyboardType="email-address"
               placeholder="you@email.com"
+              returnKeyType="go"
+              onSubmitEditing={() => void onContinueEmail()}
               {...(Platform.OS === 'web' ? ({ type: 'email' } as object) : {})}
             />
             <View style={styles.cta}>
@@ -268,6 +282,8 @@ export function SetupScreen() {
               onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
               keyboardType="number-pad"
               placeholder="123456"
+              returnKeyType="done"
+              onSubmitEditing={() => void onVerifyOtp()}
               {...(Platform.OS === 'web' ? ({ inputMode: 'numeric' } as object) : {})}
             />
             <Text style={styles.hint}>{t.otpExpiresHint}</Text>
@@ -331,22 +347,8 @@ export function SetupScreen() {
           </View>
         ) : step === 'restore' ? (
           <View style={styles.sampleBlock}>
+            <ActivityIndicator color={colors.text} />
             <Text style={styles.sampleBody}>{t.restoreCloudBody}</Text>
-            <PrimaryButton
-              label={t.useCloudData}
-              onPress={() => void finishRestore()}
-              loading={busy}
-              disabled={busy}
-            />
-            <PrimaryButton
-              label={t.startEmptyInstead}
-              variant="ghost"
-              onPress={() => {
-                clearPendingCloudBlob();
-                setStep('sample');
-              }}
-              disabled={busy}
-            />
             <Copyright />
           </View>
         ) : (

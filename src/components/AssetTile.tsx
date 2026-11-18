@@ -36,8 +36,11 @@ export function AssetTile({
 }) {
   const status = resolveServiceStatus(asset);
   const displayLines = maintenanceTileDisplay(asset, t, lang, !!compact);
-  const icon = compact ? 28 : 64;
   const pad = compact ? 8 : 12;
+  // 3 per row: use whatever height the text block leaves (about 50px worst case), so the picture
+  // grows with the tile instead of staying tiny. Between 18 (very small phones, so it never
+  // collides with the text) and 48px.
+  const icon = compact ? Math.round(Math.min(48, Math.max(18, size - pad * 2 - 50))) : 64;
   const atShop = asset.location === 'service_center';
 
   return (

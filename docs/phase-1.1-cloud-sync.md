@@ -155,8 +155,10 @@ Same JSON shape as today: `assets`, `logs`, `changes`, `vendors`, `events`, `lan
 2. **When online** (app open, resume, debounce after save):
    - If `dirty` → `PUT /sync` with `{ baseRevision: lastSyncedRevision, blob }`
    - Else → optional `GET /sync`; if server revision > local → pull (or conflict if dirty too)
-3. **PUT success** → `revision = newRevision`, `dirty = false`
+3. **PUT success** → `revision = newRevision`; `dirty = false` **only if nothing changed while the request was in flight** (v1.2.4). The latest stored state is re-read after the PUT and only photo keys are patched onto it; a change made mid-request keeps `dirty = true` and is pushed by an immediate follow-up sync.
 4. **PUT 409** (revision mismatch) → conflict UI: **Use cloud** / **Keep mine**
+5. A pull (cloud ahead, local clean) is discarded if the device became dirty during the download.
+6. A `syncNow` requested while a sync is running is queued (one rerun right after), not dropped.
 
 No row-level delta merge in 1.1. “Sync only new data” = **only push when dirty**, not field-level merge. Row-level sync = **1.2+** if multi-device conflicts hurt.
 
@@ -279,3 +281,4 @@ Do **not** put photos in D1 (≈1 MB statement limit). Do **not** use Zoho Mail 
 | 2026-08-20 | Zoho/R2 notes; then Resend preferred for OTP |
 | 2026-08-20 | **Revamp:** cloud-authoritative after link; local = offline cache; email-first setup; blob + revision; user conflict UI; Resend OTP |
 | 2026-11-18 | v1.2.0: existing email restores cloud data automatically (no choice screen); Enter submits email and code fields |
+| 2026-11-18 | v1.2.4: fixed data loss when saving during an in-flight sync (stale snapshot written back, dirty flag cleared); queued rerun; pull skipped if dirty |

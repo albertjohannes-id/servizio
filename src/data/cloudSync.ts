@@ -57,25 +57,40 @@ export async function runCloudSync(): Promise<SyncResult> {
           await saveState(local);
         }
         const blob = stripLocalPhotoUris(local);
+        // What is on disk right now is exactly what we are about to push.
+        const pushedJson = JSON.stringify(await loadState());
         const put = await putSync(meta.lastSyncedRevision, blob);
+
+        // The user may have saved something while the request was in flight. Never write our
+        // older snapshot back over it: start from the latest state and only patch photo keys.
+        const latest = await loadState();
+        const changedMeanwhile = JSON.stringify(latest) !== pushedJson;
+        const pushedLogs = new Map(local.logs.map((l) => [l.id, l]));
         const merged: AppState = {
-          ...local,
-          logs: local.logs.map((log) => {
+          ...latest,
+          logs: latest.logs.map((log) => {
             const cloud = blob.logs.find((l) => l.id === log.id);
-            if (!cloud) return log;
+            const pushed = pushedLogs.get(log.id);
+            if (!cloud || !pushed) return log;
             return {
               ...log,
-              receiptUri: cloud.receiptUri ?? (isStillLocal(log.receiptUri) ? log.receiptUri : null),
+              receiptUri:
+                log.receiptUri !== pushed.receiptUri
+                  ? log.receiptUri
+                  : cloud.receiptUri ?? (isStillLocal(log.receiptUri) ? log.receiptUri : null),
               serviceTagUri:
-                cloud.serviceTagUri ??
-                (isStillLocal(log.serviceTagUri) ? log.serviceTagUri : null),
+                log.serviceTagUri !== pushed.serviceTagUri
+                  ? log.serviceTagUri
+                  : cloud.serviceTagUri ??
+                    (isStillLocal(log.serviceTagUri) ? log.serviceTagUri : null),
             };
           }),
         };
         await saveState(merged);
         await saveSyncMeta({
           lastSyncedRevision: put.revision,
-          dirty: false,
+          // Still dirty if the user changed anything while we were pushing: it needs another push.
+          dirty: changedMeanwhile,
           lastSyncedAt: put.updatedAt,
         });
         return { type: 'pushed', revision: put.revision, lastSyncedAt: put.updatedAt };
@@ -95,6 +110,14 @@ export async function runCloudSync(): Promise<SyncResult> {
 
     const remote = await getSync();
     if (remote.revision > meta.lastSyncedRevision) {
+      // The user may have saved while this download was in flight; do not overwrite their edit.
+      if ((await loadSyncMeta()).dirty) {
+        return {
+          type: 'idle',
+          revision: meta.lastSyncedRevision,
+          lastSyncedAt: meta.lastSyncedAt,
+        };
+      }
       if (remote.blob) {
         await saveState(remote.blob);
         await saveSyncMeta({

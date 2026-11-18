@@ -13,7 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../data/AuthContext';
 import { useAssets } from '../data/AssetContext';
 import { syncAssetReminders } from '../data/notifications';
-import { sortAssetsForHome } from '../domain/status';
+import { HOME_BUCKETS, HomeBucket, homeBucket, sortAssetsForHome } from '../domain/status';
 import { dictionaries } from '../i18n/strings';
 import { AssetTile } from '../components/AssetTile';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -35,7 +35,26 @@ export function HomeScreen({ navigation }: Props) {
   const assets = useMemo(() => sortAssetsForHome(state.assets), [state.assets]);
   const [gridWidth, setGridWidth] = useState(0);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [activeBuckets, setActiveBuckets] = useState<HomeBucket[]>([...HOME_BUCKETS]);
   const columns = state.homeColumns === 3 ? 3 : 2;
+  const filtering = activeBuckets.length < HOME_BUCKETS.length;
+  const visibleAssets = useMemo(
+    () => (filtering ? assets.filter((a) => activeBuckets.includes(homeBucket(a))) : assets),
+    [assets, activeBuckets, filtering]
+  );
+
+  /** All selected by default. Tap one while all are on to show only it; tap more to add; none left = all again. */
+  const toggleBucket = (bucket: HomeBucket) => {
+    setActiveBuckets((prev) => {
+      if (prev.length === HOME_BUCKETS.length) return [bucket];
+      if (prev.includes(bucket)) {
+        const next = prev.filter((b) => b !== bucket);
+        return next.length ? next : [...HOME_BUCKETS];
+      }
+      return [...prev, bucket];
+    });
+  };
+  const showAllBuckets = () => setActiveBuckets([...HOME_BUCKETS]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,14 +141,43 @@ export function HomeScreen({ navigation }: Props) {
           {assets.length ? (
             <>
               <View style={styles.legend}>
-                <LegendDot color={colors.tileOverdue} label={t.sectionOverdue} />
-                <LegendDot color={colors.tileDueSoon} label={t.sectionDueSoon} />
-                <LegendDot color={colors.tileOnTrack} label={t.sectionOnTrack} />
-                <LegendDot color={colors.tileUntracked} label={t.sectionNoSchedule} outlined />
+                {(
+                  [
+                    ['overdue', colors.tileOverdue, t.sectionOverdue],
+                    ['due_soon', colors.tileDueSoon, t.sectionDueSoon],
+                    ['on_track', colors.tileOnTrack, t.sectionOnTrack],
+                    ['no_schedule', colors.tileUntracked, t.sectionNoSchedule],
+                  ] as const
+                ).map(([bucket, color, label]) => (
+                  <LegendFilter
+                    key={bucket}
+                    color={color}
+                    label={label}
+                    outlined={bucket === 'no_schedule'}
+                    selected={activeBuckets.includes(bucket)}
+                    filtering={filtering}
+                    onPress={() => toggleBucket(bucket)}
+                  />
+                ))}
               </View>
+              {filtering ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={showAllBuckets}
+                  hitSlop={8}
+                  style={styles.showAll}
+                >
+                  <Text style={styles.showAllText}>{t.showAll}</Text>
+                </Pressable>
+              ) : null}
+              {visibleAssets.length === 0 ? (
+                <View style={styles.filterEmpty}>
+                  <Text style={styles.emptyBody}>{t.filterEmpty}</Text>
+                </View>
+              ) : null}
               <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
                 {tileSize > 0
-                  ? assets.map((asset) => (
+                  ? visibleAssets.map((asset) => (
                       <AssetTile
                         key={asset.id}
                         asset={asset}
@@ -163,7 +211,7 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.avatarLetter}>{(email?.[0] ?? 'S').toUpperCase()}</Text>
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.profileLabel}>{emailVerified ? t.emailVerified : t.emailUnverified}</Text>
+              <Text style={styles.profileLabel}>{emailVerified ? `✅ ${t.emailVerified}` : t.emailUnverified}</Text>
               <Text style={styles.profileEmail} numberOfLines={1}>
                 {email}
               </Text>
@@ -179,9 +227,33 @@ export function HomeScreen({ navigation }: Props) {
   );
 }
 
-function LegendDot({ color, label, outlined }: { color: string; label: string; outlined?: boolean }) {
+function LegendFilter({
+  color,
+  label,
+  outlined,
+  selected,
+  filtering,
+  onPress,
+}: {
+  color: string;
+  label: string;
+  outlined?: boolean;
+  selected: boolean;
+  filtering: boolean;
+  onPress: () => void;
+}) {
+  // Default (nothing filtered): all four look normal. While filtering: chosen ones are boxed, the rest fade.
+  const boxed = filtering && selected;
+  const faded = filtering && !selected;
   return (
-    <View style={styles.legendItem}>
+    <Pressable
+      role="checkbox"
+      aria-label={label}
+      aria-checked={selected}
+      onPress={onPress}
+      hitSlop={4}
+      style={[styles.legendItem, boxed && styles.legendItemOn, faded && styles.legendItemOff]}
+    >
       <View
         style={[
           styles.legendSwatch,
@@ -189,8 +261,10 @@ function LegendDot({ color, label, outlined }: { color: string; label: string; o
           outlined && styles.legendSwatchOutlined,
         ]}
       />
-      <Text style={styles.legendLabel}>{label}</Text>
-    </View>
+      <Text style={[styles.legendLabel, boxed && styles.legendLabelOn]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -226,11 +300,26 @@ const styles = StyleSheet.create({
   syncBannerText: { fontSize: 14, fontWeight: '500', color: colors.text },
   syncBannerSub: { marginTop: 4, fontSize: 12, color: colors.muted, lineHeight: 18 },
   scroll: { flex: 1 },
-  legend: { flexDirection: 'row', gap: 4, marginBottom: spacing.md },
-  legendItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5 },
+  legend: { flexDirection: 'row', gap: 4, marginBottom: spacing.sm },
+  legendItem: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  legendItemOn: { borderColor: colors.text, backgroundColor: colors.surface },
+  legendItemOff: { opacity: 0.4 },
   legendSwatch: { width: 12, height: 12, borderRadius: 3 },
   legendSwatchOutlined: { borderWidth: 1, borderColor: colors.line },
   legendLabel: { fontSize: 10, color: colors.muted, textAlign: 'center' },
+  legendLabelOn: { color: colors.text, fontWeight: '600' },
+  showAll: { alignSelf: 'flex-end', marginBottom: spacing.sm },
+  showAllText: { fontSize: 12, color: colors.muted, textDecorationLine: 'underline' },
+  filterEmpty: { paddingVertical: spacing.lg },
   verificationHint: { fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   empty: { paddingTop: spacing.xl },

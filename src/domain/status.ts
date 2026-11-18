@@ -95,14 +95,20 @@ export function resolveServiceStatus(asset: Asset, now = new Date()): ServiceSta
   return computeScheduleStatus(asset, now);
 }
 
+/** The four Home groups. Same grouping as the tile colors; also used by the Home filter. */
+export type HomeBucket = 'overdue' | 'due_soon' | 'on_track' | 'no_schedule';
+export const HOME_BUCKETS: readonly HomeBucket[] = ['overdue', 'due_soon', 'on_track', 'no_schedule'];
+
+export function homeBucket(asset: Asset, now = new Date()): HomeBucket {
+  if (!isScheduleTracked(asset)) return 'no_schedule';
+  const s = resolveServiceStatus(asset, now);
+  if (s === 'overdue') return 'overdue';
+  if (s === 'due_soon') return 'due_soon';
+  return 'on_track';
+}
+
 export function sortAssetsForHome(assets: Asset[], now = new Date()): Asset[] {
-  const rank = (a: Asset) => {
-    if (!isScheduleTracked(a)) return 3;
-    const s = resolveServiceStatus(a, now);
-    if (s === 'overdue') return 0;
-    if (s === 'due_soon') return 1;
-    return 2;
-  };
+  const rank = (a: Asset) => HOME_BUCKETS.indexOf(homeBucket(a, now));
   return [...assets]
     .filter((a) => !a.archived)
     .sort(

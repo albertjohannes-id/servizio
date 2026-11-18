@@ -126,6 +126,8 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [syncConflict, setSyncConflict] = useState<SyncConflict | null>(null);
   const syncingRef = useRef(false);
+  const rerunRef = useRef(false);
+  const syncNowRef = useRef<() => Promise<SyncResult>>(async () => ({ type: 'not_linked' }));
   const conflictRef = useRef(false);
 
   const refreshSyncMeta = useCallback(async () => {
@@ -170,6 +172,8 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
 
   const syncNow = useCallback(async (): Promise<SyncResult> => {
     if (syncingRef.current) {
+      // A change arrived while a sync is running: remember to sync again right after it.
+      rerunRef.current = true;
       return { type: 'idle', revision: syncMeta.lastSyncedRevision, lastSyncedAt: syncMeta.lastSyncedAt };
     }
     if (conflictRef.current) {
@@ -217,8 +221,15 @@ export function AssetProvider({ children }: { children: React.ReactNode }) {
       return result;
     } finally {
       syncingRef.current = false;
+      if (rerunRef.current) {
+        rerunRef.current = false;
+        setTimeout(() => {
+          if (!conflictRef.current) void syncNowRef.current();
+        }, 300);
+      }
     }
   }, [refreshSyncMeta, state, syncConflict, syncMeta.lastSyncedAt, syncMeta.lastSyncedRevision]);
+  syncNowRef.current = syncNow;
 
   const resolveSyncKeepLocal = useCallback(async () => {
     if (!syncConflict) return;

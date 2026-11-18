@@ -13,6 +13,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.4',
+    date: '2026-11-18',
+    en: [
+      'On the home screen, tap Overdue, Due soon, On track or No schedule to show only those assets. Tap more to add them, and “Show all” brings everything back.',
+      'With 3 assets per row, the pictures are now bigger.',
+      'A ✅ now appears next to “Email verified”.',
+      'The asset page shows “-” when there are no reminders.',
+      'Fixed: something you saved while the app was syncing could be lost. It is now always kept and sent to the cloud right after.',
+    ],
+    id: [
+      'Di layar utama, ketuk Terlambat, Segera, Aman, atau Belum jadwal untuk menampilkan aset itu saja. Ketuk yang lain untuk menambah, dan “Tampilkan semua” mengembalikan semuanya.',
+      'Dengan 3 aset per baris, gambarnya kini lebih besar.',
+      '✅ kini muncul di samping “Email terverifikasi”.',
+      'Halaman aset menampilkan “-” jika belum ada pengingat.',
+      'Diperbaiki: data yang kamu simpan saat aplikasi sedang sinkronisasi bisa hilang. Kini selalu tersimpan dan langsung dikirim ke cloud sesudahnya.',
+    ],
+  },
+  {
     version: '1.2.3',
     date: '2026-11-18',
     en: [

@@ -29,14 +29,15 @@ Without Resend, local OTP is returned as `devOtp` in the JSON (`ALLOW_OTP_IN_RES
 
 - **Local 6-digit PIN** (hashed on device). Locks after 1 hour idle. PIN is never sent to the server.
 - **Email-first setup:** new emails create a local PIN (and an unverified cloud user when online). Existing emails always verify with OTP, then create a PIN on this device and their cloud data loads automatically. **Enter** submits the email and code fields. Account shows verified / unverified and can verify later.
-- **Cloud sync (1.1):** after OTP, D1 holds the authoritative JSON blob; this device keeps an offline working copy and pushes when dirty. Revision conflicts ask Use cloud / Keep mine.
+- **Cloud sync (1.1):** after OTP, D1 holds the authoritative JSON blob; this device keeps an offline working copy and pushes when dirty. Every add / edit / log triggers a sync shortly after saving (verified accounts only), and a save made during a sync is never lost. Revision conflicts ask Use cloud / Keep mine.
 - **Photo sync (1.2):** receipt + service-tag images upload to R2 on sync; history detail sheet can attach / change / remove photos without a new log.
 - JSON **export / import** from Account (photo **bytes** not embedded; `r2:` / local URI strings only).
 - Assets: kind, name, brand, type/model, manufacture year, purchase year, purchase-at.
 - **Condition** (working / needs attention / not working), **schedule** (on track / due soon / overdue), and **location** (home / service center) are separate.
 - **Dual schedule** for vehicles: track by **date**, by **km**, or **both** — or **Not yet** (register first, add reminders later via Edit or from the first routine service; default for new assets).
 - Home dashboard: status-colored tiles with plain-language maintenance lines, e.g. `Service in 45 days` and `Service in 500 km`. Compact 3-column grid merges both into one line (`In 45 days · 500 km`).
-- Account → Appearance chooses **2 or 3** tiles per row.
+- Account → Appearance chooses **2 or 3** tiles per row (bigger pictures in the 3-column layout).
+- The four status labels above the tiles (Overdue, Due soon, On track, No schedule) are **filters**: all on by default, tap one to show only that group, tap more to add, "Show all" to reset.
 - **Log service** — single manual form: service date, **routine vs one-off** (one-off does not change schedule), next due date with **+1m…+6m** shortcuts from service date (one row, even on small phones), optional next km, notes, cost, receipt + service-tag photos (tap to view full size), vendor.
 - **Log km** — separate odometer update for car / motorcycle / bike (works even before km reminders are enabled).
 - OTP: Resend from `noreply@inovateks.id`; **Resend code** in-app with cooldown; 10-minute expiry.

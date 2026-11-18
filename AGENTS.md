@@ -45,6 +45,8 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - **Phase 1.2 photos:** R2 bucket `servizio-photos` (binding `PHOTOS`). On sync, local receipt/service-tag images upload via `PUT /media`, then log URIs become `r2:users/{userId}/logs/{logId}/…`. Display loads via authenticated `GET /media`. Never put photo bytes in the D1 JSON blob.
 - **Production:** app `https://servizio.ai.id` → API `https://api.servizio.ai.id`. Build with `EXPO_PUBLIC_API_URL` set, then `npm run export:web` + `npx wrangler deploy` from `prototype/`. API: `cd api && npm run deploy`. Secret `RESEND_API_KEY` must be on Worker **`servizio-api`** (not the static `servizio` Worker).
 - Client: `EXPO_PUBLIC_API_URL` (see `.env.example`). `src/data/apiClient.ts`, `cloudSync.ts`, `syncStorage.ts`. Sync UI: Account shows pending / last synced / offline / conflict; Home banners for conflict, offline-with-dirty, and errors. Auto-sync skips while a conflict is unresolved; expired sessions clear local cloud tokens.
+  - **Every change syncs automatically** once the email is verified (a cloud session only exists after OTP verify; unverified accounts never sync): any state change (add, edit, log service/km, photos, archive…) triggers `syncNow` after a 900ms debounce, and the app also syncs when it returns to the foreground.
+  - **Sync must never overwrite newer local data.** `runCloudSync` reads the latest stored state *after* the PUT, only patches photo keys onto it, and leaves `dirty: true` if anything changed while the request was in flight. A `pull` is skipped if the device became dirty during the download. A `syncNow` call that arrives while a sync is running sets `rerunRef` and one more sync runs right after (before this, a record saved mid-sync was silently lost). Do not write a pre-request snapshot back to storage or clear `dirty` blindly.
 - Old `serviceOverride: 'in_service'` migrates to `location: 'service_center'` in `normalizeAsset`.
 - Missing `scheduleByDate` on loaded assets defaults to `true`. Missing `serviceKind` on logs defaults to `routine`.
 
@@ -63,8 +65,10 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 
 - Warm paper `#F3F1EC`, ink `#1C1A17`. Minimal, not candy chips.
 - Buttons: reusable `PrimaryButton`, slight corner radius.
-- Home: colored square tiles (green / orange / red = schedule). Service Center shows a badge, not a fourth color. Tile image scales down for 3-per-row.
+- Home: colored square tiles (green / orange / red = schedule). Service Center shows a badge, not a fourth color. With 3-per-row the picture size follows the tile (`AssetTile`: 18–48px, never colliding with the text; about 40px on a 390px phone).
 - Account → Appearance: 2 or 3 tiles per row (`homeColumns`).
+- **Home filter:** the four legend items (Overdue / Due soon / On track / No schedule) are multi-select checkboxes (`role="checkbox"`, `aria-checked`) and filter the tiles. All are selected by default. Tapping one while all are selected shows only that group; tapping others adds them; deselecting the last one returns to all; a "Show all" link appears while filtering and an empty selection shows "Nothing here right now". Grouping comes from `homeBucket()` in `domain/status.ts`, the same function that orders and colors the tiles. Filter state is per session (not persisted).
+- Email verified is shown as `✅ Email verified` on Home and Account; unverified has no emoji. Asset detail shows `-` for Reminders when nothing is tracked.
 - Thousand separators on quantities (km, cost); **not** on years.
 - Suggest/search lists (brand, vendor, purchase-at) open **only while the field is focused**. Purchase-at presets: Shopee, Tokopedia, Blibli, Lazada, Official Dealer, Secondhand.
 - Dates: compact in-app calendar (not full-screen). Years: dropdown.
@@ -118,5 +122,5 @@ cd api && npm install && npm run db:local && npm run dev
 cd api && npm run deploy
 ```
 
-- Home: four schedule legend items stay in one row; profile shows email verification status and links to Account for verification. Condition dropdown uses the same green/amber/red dots as tiles.
+- Home: four schedule legend filters stay in one row; profile shows email verification status and links to Account for verification. Condition dropdown uses the same green/amber/red dots as tiles.
 - Hashed web assets use immutable caching via `public/_headers`; keep HTML revalidated so deployments load the latest bundle.

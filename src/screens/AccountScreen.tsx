@@ -224,7 +224,7 @@ export function AccountScreen({ navigation }: Props) {
         <View style={styles.profileText}>
           <Text style={styles.email}>{email}</Text>
           <Text style={styles.hint}>
-            {emailVerified ? t.emailVerified : t.emailUnverified}. {t.accountHint}
+            {emailVerified ? `✅ ${t.emailVerified}` : t.emailUnverified}. {t.accountHint}
           </Text>
         </View>
       </View>

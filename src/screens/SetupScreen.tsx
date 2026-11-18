@@ -14,6 +14,8 @@ import { Copyright } from '../components/Copyright';
 import { PinPad } from '../components/PinPad';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TextField } from '../components/TextField';
+import { FieldLabel } from '../components/FieldLabel';
+import { OtpInput } from '../components/OtpInput';
 import { useAuth } from '../data/AuthContext';
 import { useAssets } from '../data/AssetContext';
 import { markWhatsNewSeen } from '../data/changelogStorage';
@@ -276,18 +278,13 @@ export function SetupScreen() {
           </View>
         ) : step === 'otp' ? (
           <View style={styles.form}>
-            <TextField
-              label={t.otpCode}
-              required
+            <FieldLabel label={t.otpCode} required />
+            <OtpInput
+              accessibilityLabel={t.otpCode}
               value={otp}
-              onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
-              keyboardType="number-pad"
-              autoComplete="one-time-code"
-              textContentType="oneTimeCode"
-              placeholder="123456"
-              returnKeyType="done"
+              onChangeText={setOtp}
+              autoFocus
               onSubmitEditing={() => void onVerifyOtp()}
-              {...(Platform.OS === 'web' ? ({ inputMode: 'numeric' } as object) : {})}
             />
             <Text style={styles.hint}>{t.otpExpiresHint}</Text>
             {devOtp ? <Text style={styles.devOtp}>{t.devOtpHint.replace('{code}', devOtp)}</Text> : null}
@@ -357,7 +354,6 @@ export function SetupScreen() {
         ) : (
           <View style={styles.pinBlock}>
             <PinPad
-              title={step === 'pin' ? t.createPin : t.confirmPin}
               subtitle={step === 'pin' ? t.createPinHint : t.confirmPinHint}
               error={error}
               disabled={busy}

@@ -18,6 +18,8 @@ import { dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Copyright } from '../components/Copyright';
 import { TextField } from '../components/TextField';
+import { FieldLabel } from '../components/FieldLabel';
+import { OtpInput } from '../components/OtpInput';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { WhatsNewModal } from '../components/WhatsNewModal';
 import { RootStackParamList } from '../navigation/types';
@@ -279,18 +281,13 @@ export function AccountScreen({ navigation }: Props) {
         {!emailVerified ? (
           verifyStep ? (
             <View style={styles.verifyBox}>
-              <TextField
-                label={t.otpCode}
-                required
+              <FieldLabel label={t.otpCode} required />
+              <OtpInput
+                accessibilityLabel={t.otpCode}
                 value={otp}
-                onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
-                keyboardType="number-pad"
-                autoComplete="one-time-code"
-                textContentType="oneTimeCode"
-                placeholder="123456"
-                returnKeyType="done"
+                onChangeText={setOtp}
+                autoFocus
                 onSubmitEditing={() => void onConfirmVerify()}
-                {...(Platform.OS === 'web' ? ({ inputMode: 'numeric' } as object) : {})}
               />
               <Text style={styles.menuSub}>{t.otpExpiresHint}</Text>
               {devOtp ? (

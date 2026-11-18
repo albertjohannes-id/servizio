@@ -170,15 +170,13 @@ export async function handleRegister(req: Request, env: Env): Promise<Response> 
 async function sendResend(env: Env, email: string, code: string): Promise<boolean> {
   if (!env.RESEND_API_KEY) return false;
   const from = env.RESEND_FROM || 'Servizio <onboarding@resend.dev>';
-  // Gmail-friendly format: standard phrasing, code in the subject and on the first body line,
-  // digits kept plain and continuous (no per-digit elements, boxes or letter-spacing).
+  // Gmail-friendly format: the code appears once in the body as a plain sentence on its own line,
+  // near the top, with standard phrasing. The subject also carries the code.
   const text = [
     `Your verification code is ${code}`,
     '',
-    code,
-    '',
     'Enter this code in Servizio to continue. It expires in 10 minutes.',
-    'If your email app does not suggest the code automatically, copy it from this email and paste it into the code field in Servizio.',
+    'If your email app does not suggest the code, copy it from this email and paste it into the code field in Servizio.',
     '',
     'Do not share this code with anyone. If you did not request it, you can ignore this email.',
     '',
@@ -188,10 +186,9 @@ async function sendResend(env: Env, email: string, code: string): Promise<boolea
 <html>
 <body style="margin:0;padding:24px;background:#F3F1EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#1C1A17;">
   <div style="max-width:440px;margin:0 auto;padding:28px;background:#ffffff;border:1px solid #E4DFD6;border-radius:12px;">
-    <p style="margin:0 0 12px;font-size:20px;line-height:28px;">Your verification code is ${code}</p>
-    <p style="margin:0 0 20px;font-size:32px;line-height:40px;font-weight:bold;">${code}</p>
+    <p style="margin:0 0 16px;font-size:16px;line-height:24px;">Your verification code is ${code}</p>
     <p style="margin:0 0 12px;font-size:15px;line-height:22px;color:#4A4640;">Enter this code in Servizio to continue. It expires in 10 minutes.</p>
-    <p style="margin:0 0 20px;font-size:15px;line-height:22px;color:#4A4640;">If your email app does not suggest the code automatically, copy it from this email and paste it into the code field in Servizio.</p>
+    <p style="margin:0 0 20px;font-size:15px;line-height:22px;color:#4A4640;">If your email app does not suggest the code, copy it from this email and paste it into the code field in Servizio.</p>
     <p style="margin:0 0 12px;font-size:13px;line-height:18px;color:#8A847C;">Do not share this code with anyone. If you did not request it, you can ignore this email.</p>
     <p style="margin:0;font-size:13px;line-height:18px;color:#8A847C;">Servizio by Inovateks</p>
   </div>

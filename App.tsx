@@ -16,8 +16,14 @@ function useWebFieldInset() {
     const style = document.createElement('style');
     style.id = id;
     style.textContent =
-      'input, textarea { padding-left: 20px !important; padding-right: 16px !important; box-sizing: border-box; }';
+      'input, textarea { padding-left: 20px !important; padding-right: 16px !important; box-sizing: border-box; }' +
+      // Paint the page paper colour everywhere, including the strip Android browsers show below
+      // the content when the URL/navigation bar changes the visible height.
+      ' html, body, #root { background-color: #F3F1EC; min-height: 100%; }' +
+      ' html { background-color: #F3F1EC; }';
     document.head.appendChild(style);
+    document.documentElement.style.backgroundColor = '#F3F1EC';
+    document.body.style.backgroundColor = '#F3F1EC';
   }, []);
 }
 

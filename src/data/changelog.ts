@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.6',
+    date: '2026-11-18',
+    en: [
+      'The verification code is now entered in six boxes, like a one-time PIN. Your phone can still suggest the code from the email.',
+      'The verification email shows the code once, near the top, so it reads more clearly.',
+      'Fixed a white strip at the bottom of the page on some Android phones.',
+      'Fixed “Create PIN” showing twice on the PIN screen.',
+    ],
+    id: [
+      'Kode verifikasi kini dimasukkan di enam kotak, seperti PIN sekali pakai. Ponsel tetap bisa menyarankan kodenya dari email.',
+      'Email verifikasi menampilkan kode sekali, di bagian atas, agar lebih jelas.',
+      'Diperbaiki: garis putih di bagian bawah halaman pada beberapa ponsel Android.',
+      'Diperbaiki: “Buat PIN” tampil dua kali di layar PIN.',
+    ],
+  },
+  {
     version: '1.2.5',
     date: '2026-11-18',
     en: [

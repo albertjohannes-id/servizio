@@ -12,11 +12,13 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../data/AuthContext';
 import { useAssets } from '../data/AssetContext';
 import { backupSummary, exportBackupFile, parseBackup, pickBackupFile } from '../data/backup';
+import { loadSyncMeta } from '../data/syncStorage';
 import { syncStatusLabel } from '../data/syncStatusLabel';
 import { dictionaries } from '../i18n/strings';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Copyright } from '../components/Copyright';
 import { TextField } from '../components/TextField';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { WhatsNewModal } from '../components/WhatsNewModal';
 import { RootStackParamList } from '../navigation/types';
 import { APP_VERSION } from '../version';
@@ -56,6 +58,7 @@ export function AccountScreen({ navigation }: Props) {
   const {
     email,
     lock,
+    resetDevice,
     emailVerified,
     cloudLinked,
     startEmailVerification,
@@ -75,7 +78,7 @@ export function AccountScreen({ navigation }: Props) {
     resolveSyncUseCloud,
   } = useAssets();
   const t = dictionaries[state.language];
-  const [busy, setBusy] = useState<'export' | 'import' | 'verify' | 'sync' | null>(null);
+  const [busy, setBusy] = useState<'export' | 'import' | 'verify' | 'sync' | 'logout' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [devTaps, setDevTaps] = useState(0);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
@@ -215,6 +218,37 @@ export function AccountScreen({ navigation }: Props) {
     setBusy(null);
   };
 
+  const onLogOut = async () => {
+    if (busy || !email) return;
+    setMessage(null);
+    let detail: string;
+    if (emailVerified) {
+      setBusy('sync');
+      await syncNow();
+      const meta = await loadSyncMeta();
+      setBusy(null);
+      detail = meta.dirty ? t.logOutBodyUnsynced : t.logOutBodyCloud.replace('{email}', email);
+    } else {
+      detail = t.logOutBodyNoCloud;
+    }
+    const body = `${t.logOutDeletes}\n\n${detail}`;
+    const proceed = await new Promise<boolean>((resolve) => {
+      if (Platform.OS === 'web') {
+        resolve(
+          typeof window !== 'undefined' ? window.confirm(`${t.logOutTitle}\n\n${body}`) : false
+        );
+        return;
+      }
+      Alert.alert(t.logOutTitle, body, [
+        { text: t.cancel, style: 'cancel', onPress: () => resolve(false) },
+        { text: t.logOutConfirm, style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!proceed) return;
+    setBusy('logout');
+    await resetDevice('logout');
+  };
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.profile}>
@@ -223,9 +257,20 @@ export function AccountScreen({ navigation }: Props) {
         </View>
         <View style={styles.profileText}>
           <Text style={styles.email}>{email}</Text>
-          <Text style={styles.hint}>
-            {emailVerified ? `✅ ${t.emailVerified}` : t.emailUnverified}. {t.accountHint}
-          </Text>
+          {emailVerified ? (
+            <View style={styles.verifiedRow}>
+              <View style={styles.badgeWrap}>
+                <VerifiedBadge />
+              </View>
+              <Text style={[styles.hint, styles.verifiedText]}>
+                {t.emailVerified}. {t.accountHint}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.hint}>
+              {t.emailUnverified}. {t.accountHint}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -411,6 +456,15 @@ export function AccountScreen({ navigation }: Props) {
         />
       </View>
 
+      <View style={[styles.group, styles.aboutGroup]}>
+        <MenuRow
+          title={t.logOut}
+          subtitle={t.logOutHint}
+          onPress={() => void onLogOut()}
+          danger
+        />
+      </View>
+
       {devTaps >= 5 ? (
         <View style={styles.misc}>
           <PrimaryButton
@@ -456,6 +510,9 @@ const styles = StyleSheet.create({
   profileText: { flex: 1 },
   email: { fontSize: 18, fontWeight: '500', color: colors.text },
   hint: { marginTop: 4, fontSize: 13, color: colors.muted, lineHeight: 18 },
+  verifiedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  verifiedText: { flex: 1, marginTop: 4 },
+  badgeWrap: { marginTop: 5 },
   sectionLabel: {
     marginTop: spacing.xl,
     marginBottom: spacing.sm,

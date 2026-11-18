@@ -19,6 +19,7 @@ import { AssetTile } from '../components/AssetTile';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { RootStackParamList } from '../navigation/types';
 import { Copyright } from '../components/Copyright';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { WhatsNewModal } from '../components/WhatsNewModal';
 import { markWhatsNewSeen, shouldShowWhatsNew } from '../data/changelogStorage';
 import { colors, spacing } from '../theme';
@@ -211,7 +212,14 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.avatarLetter}>{(email?.[0] ?? 'S').toUpperCase()}</Text>
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.profileLabel}>{emailVerified ? `✅ ${t.emailVerified}` : t.emailUnverified}</Text>
+              {emailVerified ? (
+                <View style={styles.verifiedRow}>
+                  <VerifiedBadge size={14} />
+                  <Text style={styles.profileLabel}>{t.emailVerified}</Text>
+                </View>
+              ) : (
+                <Text style={styles.profileLabel}>{t.emailUnverified}</Text>
+              )}
               <Text style={styles.profileEmail} numberOfLines={1}>
                 {email}
               </Text>
@@ -357,6 +365,7 @@ const styles = StyleSheet.create({
   avatarLetter: { fontSize: 14, fontWeight: '600', color: colors.text },
   profileText: { flex: 1 },
   profileLabel: { fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   profileEmail: { marginTop: 2, fontSize: 14, color: colors.text, fontWeight: '500' },
   chevron: { fontSize: 22, color: colors.muted, lineHeight: 24 },
 });

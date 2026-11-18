@@ -28,7 +28,8 @@ Without Resend, local OTP is returned as `devOtp` in the JSON (`ALLOW_OTP_IN_RES
 ## What this MVP does
 
 - **Local 6-digit PIN** (hashed on device). Locks after 1 hour idle. PIN is never sent to the server.
-- **Email-first setup:** new emails create a local PIN (and an unverified cloud user when online). Existing emails always verify with OTP, then create a PIN on this device and their cloud data loads automatically. **Enter** submits the email and code fields. Account shows verified / unverified and can verify later.
+- **Email-first setup:** new emails create a local PIN (and an unverified cloud user when online). Existing emails always verify with OTP, then create a PIN on this device and their cloud data loads automatically. **Enter** submits the email and code fields. Account shows verified / unverified (with a blue verified badge) and can verify later.
+- **Log out (Account, bottom):** after a confirm that says all data on this device is deleted, it wipes the local PIN, assets, photos and cloud session on this device. The cloud copy is kept; sign in again with the same email to restore it.
 - **Cloud sync (1.1):** after OTP, D1 holds the authoritative JSON blob; this device keeps an offline working copy and pushes when dirty. Every add / edit / log triggers a sync shortly after saving (verified accounts only), and a save made during a sync is never lost. Revision conflicts ask Use cloud / Keep mine.
 - **Photo sync (1.2):** receipt + service-tag images upload to R2 on sync; history detail sheet can attach / change / remove photos without a new log.
 - JSON **export / import** from Account (photo **bytes** not embedded; `r2:` / local URI strings only).

@@ -282,3 +282,4 @@ Do **not** put photos in D1 (≈1 MB statement limit). Do **not** use Zoho Mail 
 | 2026-08-20 | **Revamp:** cloud-authoritative after link; local = offline cache; email-first setup; blob + revision; user conflict UI; Resend OTP |
 | 2026-11-18 | v1.2.0: existing email restores cloud data automatically (no choice screen); Enter submits email and code fields |
 | 2026-11-18 | v1.2.4: fixed data loss when saving during an in-flight sync (stale snapshot written back, dirty flag cleared); queued rerun; pull skipped if dirty |
+| 2026-11-18 | v1.2.4: Account → Log out wipes all local data (`resetDevice('logout')`) after a confirm that states the deletion; verified accounts sync first and the confirm says whether the cloud copy is current, unsynced changes will be lost, or (unverified) nothing is in the cloud |

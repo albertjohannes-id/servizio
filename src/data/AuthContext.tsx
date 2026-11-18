@@ -81,12 +81,12 @@ type AuthContextValue = {
   verifyCurrentPin: (pin: string) => Promise<boolean>;
   lock: () => Promise<void>;
   touchActivity: () => void;
-  resetDevice: (reason: 'lockout' | 'manual') => Promise<void>;
+  resetDevice: (reason: 'lockout' | 'manual' | 'logout') => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function notifyDeviceReset(reason: 'lockout' | 'manual'): Promise<void> {
+async function notifyDeviceReset(reason: 'lockout' | 'manual' | 'logout'): Promise<void> {
   if (Platform.OS === 'web') return;
   try {
     const Notifications = await import('expo-notifications');
@@ -96,7 +96,9 @@ async function notifyDeviceReset(reason: 'lockout' | 'manual'): Promise<void> {
         body:
           reason === 'lockout'
             ? 'Too many wrong PIN attempts. Local data on this device was cleared.'
-            : 'All Servizio data on this device was erased.',
+            : reason === 'logout'
+              ? 'You were logged out. All Servizio data on this device was erased.'
+              : 'All Servizio data on this device was erased.',
       },
       trigger: null,
     });
@@ -360,7 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetDevice = useCallback(
-    async (reason: 'lockout' | 'manual') => {
+    async (reason: 'lockout' | 'manual' | 'logout') => {
       await clearAuthProfile();
       await clearState();
       await clearCloudData();

@@ -18,14 +18,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     en: [
       'On the home screen, tap Overdue, Due soon, On track or No schedule to show only those assets. Tap more to add them, and “Show all” brings everything back.',
       'With 3 assets per row, the pictures are now bigger.',
-      'A ✅ now appears next to “Email verified”.',
+      'A blue verified badge now appears next to “Email verified”.',
+      'New Log out button at the bottom of Account. It asks first and makes clear that ALL data on this device is deleted; your cloud copy stays and returns when you sign in again.',
       'The asset page shows “-” when there are no reminders.',
       'Fixed: something you saved while the app was syncing could be lost. It is now always kept and sent to the cloud right after.',
     ],
     id: [
       'Di layar utama, ketuk Terlambat, Segera, Aman, atau Belum jadwal untuk menampilkan aset itu saja. Ketuk yang lain untuk menambah, dan “Tampilkan semua” mengembalikan semuanya.',
       'Dengan 3 aset per baris, gambarnya kini lebih besar.',
-      '✅ kini muncul di samping “Email terverifikasi”.',
+      'Lencana terverifikasi biru kini muncul di samping “Email terverifikasi”.',
+      'Tombol Keluar baru di bagian bawah Akun. Akan bertanya dulu dan menegaskan bahwa SEMUA data di perangkat ini dihapus; salinan cloud tetap ada dan kembali saat kamu masuk lagi.',
       'Halaman aset menampilkan “-” jika belum ada pengingat.',
       'Diperbaiki: data yang kamu simpan saat aplikasi sedang sinkronisasi bisa hilang. Kini selalu tersimpan dan langsung dikirim ke cloud sesudahnya.',
     ],

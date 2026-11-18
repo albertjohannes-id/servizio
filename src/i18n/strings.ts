@@ -228,6 +228,17 @@ const en = {
   enterPinToErase: 'Enter PIN to confirm erase',
   lockApp: 'Lock app',
   lockAppHint: 'Ask for PIN again',
+  logOut: 'Log out',
+  logOutHint: 'Delete all data on this device and sign out',
+  logOutTitle: 'Log out and delete local data?',
+  logOutDeletes:
+    'This DELETES ALL data stored on this device: assets, service records, photos, vendors and your PIN.',
+  logOutBodyCloud: 'Your data is safe in the cloud. Sign in again with {email} to restore it.',
+  logOutBodyUnsynced:
+    'Some recent changes are NOT synced to the cloud yet and will be lost.',
+  logOutBodyNoCloud:
+    'This email is not verified, so nothing is stored in the cloud. The data will be permanently lost unless you export a backup first.',
+  logOutConfirm: 'Log out and delete data',
   securitySection: 'Security',
   assetsSection: 'Assets',
   archivedAssets: 'Archived assets',
@@ -545,6 +556,17 @@ const id: typeof en = {
   enterPinToErase: 'Masukkan PIN untuk konfirmasi hapus',
   lockApp: 'Kunci aplikasi',
   lockAppHint: 'Minta PIN lagi',
+  logOut: 'Keluar',
+  logOutHint: 'Hapus semua data di perangkat ini dan keluar',
+  logOutTitle: 'Keluar dan hapus data lokal?',
+  logOutDeletes:
+    'Ini MENGHAPUS SEMUA data di perangkat ini: aset, riwayat servis, foto, vendor, dan PIN kamu.',
+  logOutBodyCloud: 'Datamu aman di cloud. Masuk lagi dengan {email} untuk memulihkannya.',
+  logOutBodyUnsynced:
+    'Sebagian perubahan terbaru BELUM tersinkron ke cloud dan akan hilang.',
+  logOutBodyNoCloud:
+    'Email ini belum terverifikasi, jadi tidak ada data di cloud. Data akan hilang permanen kecuali kamu ekspor cadangan dulu.',
+  logOutConfirm: 'Keluar dan hapus data',
   securitySection: 'Keamanan',
   assetsSection: 'Aset',
   archivedAssets: 'Aset diarsipkan',

@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.5',
+    date: '2026-11-18',
+    en: [
+      'The verification email is simpler and clearer, so Gmail and other mail apps can suggest the code for you. The code is in the subject and at the top of the email.',
+      'The email also explains what to do if no suggestion appears: copy the code and paste it into the app.',
+    ],
+    id: [
+      'Email verifikasi kini lebih sederhana dan jelas, sehingga Gmail dan aplikasi email lain bisa menyarankan kodenya. Kode ada di subjek dan di bagian atas email.',
+      'Email juga menjelaskan apa yang dilakukan jika saran tidak muncul: salin kodenya lalu tempel di aplikasi.',
+    ],
+  },
+  {
     version: '1.2.4',
     date: '2026-11-18',
     en: [

@@ -283,3 +283,4 @@ Do **not** put photos in D1 (≈1 MB statement limit). Do **not** use Zoho Mail 
 | 2026-11-18 | v1.2.0: existing email restores cloud data automatically (no choice screen); Enter submits email and code fields |
 | 2026-11-18 | v1.2.4: fixed data loss when saving during an in-flight sync (stale snapshot written back, dirty flag cleared); queued rerun; pull skipped if dirty |
 | 2026-11-18 | v1.2.4: Account → Log out wipes all local data (`resetDevice('logout')`) after a confirm that states the deletion; verified accounts sync first and the confirm says whether the cloud copy is current, unsynced changes will be lost, or (unverified) nothing is in the cloud |
+| 2026-11-18 | v1.2.5: verification email reformatted for Gmail code detection (subject `Your verification code is 123456`, code on first body line and alone on its own line, plain continuous digits, copy/paste fallback line); no API contract change |

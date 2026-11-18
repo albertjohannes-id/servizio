@@ -41,7 +41,7 @@ Without Resend, local OTP is returned as `devOtp` in the JSON (`ALLOW_OTP_IN_RES
 - The four status labels above the tiles (Overdue, Due soon, On track, No schedule) are **filters**: all on by default, tap one to show only that group, tap more to add, "Show all" to reset.
 - **Log service** — single manual form: service date, **routine vs one-off** (one-off does not change schedule), next due date with **+1m…+6m** shortcuts from service date (one row, even on small phones), optional next km, notes, cost, receipt + service-tag photos (tap to view full size), vendor.
 - **Log km** — separate odometer update for car / motorcycle / bike (works even before km reminders are enabled).
-- OTP: Resend from `noreply@inovateks.id`; **Resend code** in-app with cooldown; 10-minute expiry.
+- OTP: Resend from `noreply@inovateks.id`; **Resend code** in-app with cooldown; 10-minute expiry. The email follows Gmail's verification-code format (code in the subject and on the first line, plain digits, copy/paste fallback line). SPF, DKIM and DMARC are set for `inovateks.id`.
 - Searchable vendors; service history and change history (field + from + to); tap photos in history for full-screen view; attach / change / remove receipt and service-tag on the history sheet.
 - Required fields marked with `*` on submit forms.
 - English / Indonesian.

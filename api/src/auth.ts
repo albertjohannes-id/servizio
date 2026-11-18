@@ -170,35 +170,31 @@ export async function handleRegister(req: Request, env: Env): Promise<Response> 
 async function sendResend(env: Env, email: string, code: string): Promise<boolean> {
   if (!env.RESEND_API_KEY) return false;
   const from = env.RESEND_FROM || 'Servizio <onboarding@resend.dev>';
+  // Gmail-friendly format: standard phrasing, code in the subject and on the first body line,
+  // digits kept plain and continuous (no per-digit elements, boxes or letter-spacing).
   const text = [
-    `Your Servizio verification code is ${code}.`,
+    `Your verification code is ${code}`,
     '',
-    'It expires in 10 minutes.',
+    code,
     '',
-    'If you did not request this, you can ignore this email.',
+    'Enter this code in Servizio to continue. It expires in 10 minutes.',
+    'If your email app does not suggest the code automatically, copy it from this email and paste it into the code field in Servizio.',
+    '',
+    'Do not share this code with anyone. If you did not request it, you can ignore this email.',
+    '',
+    'Servizio by Inovateks',
   ].join('\n');
   const html = `<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:24px;background:#F3F1EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1C1A17;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:440px;margin:0 auto;background:#ffffff;border:1px solid #E4DFD6;border-radius:12px;">
-    <tr>
-      <td style="padding:28px 28px 8px;">
-        <p style="margin:0;font-size:14px;letter-spacing:0.4px;text-transform:uppercase;color:#6B6560;">Servizio</p>
-        <h1 style="margin:12px 0 0;font-size:22px;font-weight:500;letter-spacing:-0.3px;">Your verification code</h1>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:8px 28px 20px;">
-        <p style="margin:0;font-size:36px;font-weight:600;letter-spacing:6px;font-variant-numeric:tabular-nums;">${code}</p>
-        <p style="margin:16px 0 0;font-size:15px;line-height:22px;color:#6B6560;">This code expires in <strong style="color:#1C1A17;">10 minutes</strong>.</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 28px 28px;">
-        <p style="margin:0;font-size:13px;line-height:18px;color:#8A847C;">If you did not request this, you can ignore this email.</p>
-      </td>
-    </tr>
-  </table>
+<body style="margin:0;padding:24px;background:#F3F1EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#1C1A17;">
+  <div style="max-width:440px;margin:0 auto;padding:28px;background:#ffffff;border:1px solid #E4DFD6;border-radius:12px;">
+    <p style="margin:0 0 12px;font-size:20px;line-height:28px;">Your verification code is ${code}</p>
+    <p style="margin:0 0 20px;font-size:32px;line-height:40px;font-weight:bold;">${code}</p>
+    <p style="margin:0 0 12px;font-size:15px;line-height:22px;color:#4A4640;">Enter this code in Servizio to continue. It expires in 10 minutes.</p>
+    <p style="margin:0 0 20px;font-size:15px;line-height:22px;color:#4A4640;">If your email app does not suggest the code automatically, copy it from this email and paste it into the code field in Servizio.</p>
+    <p style="margin:0 0 12px;font-size:13px;line-height:18px;color:#8A847C;">Do not share this code with anyone. If you did not request it, you can ignore this email.</p>
+    <p style="margin:0;font-size:13px;line-height:18px;color:#8A847C;">Servizio by Inovateks</p>
+  </div>
 </body>
 </html>`;
   const res = await fetch('https://api.resend.com/emails', {
@@ -210,7 +206,7 @@ async function sendResend(env: Env, email: string, code: string): Promise<boolea
     body: JSON.stringify({
       from,
       to: [email],
-      subject: `Your Servizio code: ${code}`,
+      subject: `Your verification code is ${code}`,
       text,
       html,
     }),

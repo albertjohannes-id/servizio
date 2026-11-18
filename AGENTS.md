@@ -15,11 +15,11 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - **Schedule tracking per asset** (`ScheduleModePicker` on add/edit):
   - **By date** / **By km** / **Date and km** / **Not yet** (no reminders; neutral tile on home).
   - New assets default to **Not yet**.
-  - Untracked assets: banner on detail with **Add schedule**; first **routine log service** can set up reminders inline.
+  - Untracked assets: detail shows "No reminders" (no separate Add schedule button); set reminders via the header **Edit** pencil, or let the first **routine log service** set them up inline ("Set up reminders from this visit").
 - **Log service** — single manual form (no OCR):
   - Service date (required), **routine vs one-off** (`serviceKind`: `routine` | `one_time`).
   - Routine: updates next due date and/or next km depending on asset setup; one-off does not change schedule.
-  - Next service date: date picker + **+1…+6 month** quick chips from service date.
+  - Next service date: date picker + **+1m…+6m** quick chips (`+1bln…` in ID) from service date. The six chips share one row (`flex: 1`, no wrap); keep labels short so they fit a 320px screen unclipped.
   - Optional notes, cost, **receipt** and **service tag** photos (tap for full screen), vendor.
 - **Log km** — separate screen from Log service; updates `usageCurrent` only (change history). Available for **km-capable kinds** (car / motorcycle / bike) even if schedule is still **Not yet** (does not force `usageEnabled`).
 - OTP email via **Resend** (`noreply@inovateks.id` in prod). Client shows **Resend code** with ~45s cooldown; codes expire in **10 minutes** (server-enforced).
@@ -67,10 +67,11 @@ Servizio is a **personal Asset Command Center** (not a shop marketplace, not a s
 - Suggest/search lists (brand, vendor, purchase-at) open **only while the field is focused**. Purchase-at presets: Shopee, Tokopedia, Blibli, Lazada, Official Dealer, Secondhand.
 - Dates: compact in-app calendar (not full-screen). Years: dropdown.
 - Kind picker: 3-across, transparent 3D icons. Name placeholder follows kind.
-- Asset detail shows condition and location in a compact row; Edit with a pencil icon is in the header. Reminders have a contextual Add schedule action. Log service and Log km stay in a bottom action bar.
+- Asset detail shows condition and location in a compact row; Edit with a pencil icon is in the header. Reminders show the next due text (or "No reminders"). Log service and Log km stay in a bottom action bar.
 - Add/Edit Asset groups details, condition/location, and reminders; the standard back arrow discards unsaved edits, Save is in a fixed bottom bar, and Archive asset is separated at the end of the form with confirmation.
 - Add/Edit Asset: condition and reminders use dropdowns. Location picker: Home / Service Center with small house and workshop icons.
-- Detail → Add schedule opens Edit Asset and scrolls to the reminders section (`focusSection: 'reminders'`).
+- Edit Asset can open scrolled to the reminders section via `focusSection: 'reminders'`; no screen uses it right now (the detail-page Add schedule button was removed in 1.2.2).
+- Service records on the asset detail page are sorted by service date, newest first (`logsFor` in `AssetContext`; ties: most recently saved first).
 - PIN pad accepts hardware number keys on web.
 - **Navigation after save:** React Navigation 7 `navigate()` to a screen already in the stack pushes a duplicate (back then reopens the form). To return, use `navigation.popTo('Screen', params)`. Saving a service record, km, or asset edit pops back to the existing Asset detail with `savedAt: Date.now()` (shows the "Saved" toast); archive / restore / delete pop to Home / Archived. A new asset uses `replace('AssetDetail')`.
 - Avoid `CI=1` for a long-running `expo start` while editing: it disables file watching and serves stale bundles.

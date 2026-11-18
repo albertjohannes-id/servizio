@@ -204,12 +204,6 @@ export function AssetDetailScreen({ navigation, route }: Props) {
       <View style={styles.reminders}>
         <Text style={styles.label}>{t.reminders}</Text>
         <Text style={styles.statusValue}>{untracked ? t.noReminders : dueNote}</Text>
-        {!asset.archived && untracked && (
-          <Pressable accessibilityRole="button" style={styles.scheduleAction}
-            onPress={() => navigation.navigate('AddEditAsset', { assetId: asset.id, focusSection: 'reminders' })}>
-            <Text style={styles.actionText}>{t.addSchedule}</Text>
-          </Pressable>
-        )}
       </View>
       {asset.archived && <View style={styles.actions}>
         <PrimaryButton label={t.restoreAsset} onPress={confirmRestore} />
@@ -447,12 +441,10 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 const styles = StyleSheet.create({
   editText: { fontSize: 15, fontWeight: '600', color: colors.text },
   headerAction: { flexDirection: 'row', gap: 6, minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12 },
-  actionText: { fontSize: 15, fontWeight: '600', color: colors.text, textDecorationLine: 'underline' },
   statusRow: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
   statusItem: { flex: 1, minWidth: 120 },
   statusValue: { fontSize: 16, color: colors.text },
   reminders: { marginTop: 16, borderTopWidth: 1, borderColor: colors.line },
-  scheduleAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   bottomBar: { padding: 16, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.bg, flexDirection: 'row', gap: 10 },
   primaryAction: { flex: 2 },
   secondaryAction: { flex: 1 },

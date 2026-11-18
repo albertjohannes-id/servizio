@@ -34,10 +34,10 @@ Without Resend, local OTP is returned as `devOtp` in the JSON (`ALLOW_OTP_IN_RES
 - JSON **export / import** from Account (photo **bytes** not embedded; `r2:` / local URI strings only).
 - Assets: kind, name, brand, type/model, manufacture year, purchase year, purchase-at.
 - **Condition** (working / needs attention / not working), **schedule** (on track / due soon / overdue), and **location** (home / service center) are separate.
-- **Dual schedule** for vehicles: track by **date**, by **km**, or **both** — or **Not yet** (register first, add schedule later; default for new assets).
+- **Dual schedule** for vehicles: track by **date**, by **km**, or **both** — or **Not yet** (register first, add reminders later via Edit or from the first routine service; default for new assets).
 - Home dashboard: status-colored tiles with plain-language maintenance lines, e.g. `Service in 45 days` and `Service in 500 km`. Compact 3-column grid merges both into one line (`In 45 days · 500 km`).
 - Account → Appearance chooses **2 or 3** tiles per row.
-- **Log service** — single manual form: service date, **routine vs one-off** (one-off does not change schedule), next due date with **+1…+6 month** shortcuts from service date, optional next km, notes, cost, receipt + service-tag photos (tap to view full size), vendor.
+- **Log service** — single manual form: service date, **routine vs one-off** (one-off does not change schedule), next due date with **+1m…+6m** shortcuts from service date (one row, even on small phones), optional next km, notes, cost, receipt + service-tag photos (tap to view full size), vendor.
 - **Log km** — separate odometer update for car / motorcycle / bike (works even before km reminders are enabled).
 - OTP: Resend from `noreply@inovateks.id`; **Resend code** in-app with cooldown; 10-minute expiry.
 - Searchable vendors; service history and change history (field + from + to); tap photos in history for full-screen view; attach / change / remove receipt and service-tag on the history sheet.
@@ -78,7 +78,7 @@ See [docs/hosting.md](docs/hosting.md). Notifications are native-only; web uses 
 
 ## Versions and releases
 
-Semver, tagged in git as `vX.Y.Z` (`v1.0.0` first release, `v1.1.0` cloud sync and photos, `v1.2.0` auto-restore and What's new). To ship a version: add a top entry to `src/data/changelog.ts` (plain EN + ID bullets), bump `package.json` and `app.json`, run `npm run release:check`, commit, then `git tag -a vX.Y.Z -m "Servizio vX.Y.Z"` and `git push origin main --follow-tags`. Details in [AGENTS.md](AGENTS.md).
+Semver, tagged in git as `vX.Y.Z` (`v1.0.0` first release, `v1.1.0` cloud sync and photos, `v1.2.0` auto-restore and What's new, `v1.2.x` navigation and form polish). To ship a version: add a top entry to `src/data/changelog.ts` (plain EN + ID bullets), bump `package.json` and `app.json`, run `npm run release:check`, commit, then `git tag -a vX.Y.Z -m "Servizio vX.Y.Z"` and `git push origin main --follow-tags`. Details in [AGENTS.md](AGENTS.md).
 
 ## License
 

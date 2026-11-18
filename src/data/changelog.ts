@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.2',
+    date: '2026-11-18',
+    en: [
+      'The quick month buttons (+1m to +6m) now fit on one row, even on small phones.',
+      'Removed the “Add schedule” button from the asset page. You can still set reminders from Edit.',
+    ],
+    id: [
+      'Tombol bulan cepat (+1bln sampai +6bln) kini muat dalam satu baris, juga di ponsel kecil.',
+      'Tombol “Tambah jadwal” dihapus dari halaman aset. Pengingat tetap bisa diatur lewat Ubah.',
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-11-18',
     en: [

@@ -28,9 +28,9 @@ export function MonthQuickPick({
               onPress={() => onSelect(iso)}
               style={[styles.chip, on && styles.chipOn]}
               accessibilityRole="button"
-              accessibilityLabel={t.monthQuick.replace('{n}', String(months))}
+              accessibilityLabel={t.monthQuickA11y.replace('{n}', String(months))}
             >
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>
+              <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>
                 {t.monthQuick.replace('{n}', String(months))}
               </Text>
             </Pressable>
@@ -44,16 +44,18 @@ export function MonthQuickPick({
 const styles = StyleSheet.create({
   wrap: { marginTop: 8, gap: 6 },
   hint: { fontSize: 12, color: colors.muted },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  row: { flexDirection: 'row', gap: 4 },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 0,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.surface,
   },
   chipOn: { borderColor: colors.text, backgroundColor: '#E8E6E0' },
-  chipText: { fontSize: 13, fontWeight: '500', color: colors.muted },
+  chipText: { fontSize: 12, fontWeight: '500', color: colors.muted },
   chipTextOn: { color: colors.text, fontWeight: '600' },
 });
